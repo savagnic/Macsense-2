@@ -9,7 +9,10 @@ class AriSessionMemory(
     var genre: String? = null,
     var key: String? = null,
     var mood: String? = null,
-    private val maxHistorySize: Int = 20
+    private val maxHistorySize: Int = 20,
+    /** Maximum number of prior Ari commands kept in memory. Older entries are evicted so
+     *  [buildSystemInstruction] never grows the system prompt without bound. */
+    private val maxCommandHistorySize: Int = 20
 ) {
     private val _priorCommands = mutableListOf<AriCommand>()
     val priorCommands: List<AriCommand> get() = _priorCommands.toList()
@@ -25,6 +28,9 @@ class AriSessionMemory(
 
     fun addCommand(command: AriCommand) {
         _priorCommands.add(command)
+        if (_priorCommands.size > maxCommandHistorySize) {
+            _priorCommands.removeAt(0)
+        }
     }
 
     fun addMessage(role: String, text: String) {
