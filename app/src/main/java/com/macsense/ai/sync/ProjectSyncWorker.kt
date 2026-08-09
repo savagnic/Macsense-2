@@ -8,7 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.macsense.ai.di.AppContainer
+import com.macsense.ai.MacSenseApplication
 import com.macsense.ai.telemetry.AppLogger
 import java.util.concurrent.TimeUnit
 
@@ -28,7 +28,16 @@ class ProjectSyncWorker(
             AppLogger.w(TAG, "Cloud sync is not configured; refusing to report a successful backup")
             return Result.failure()
         }
-        val engine = ProjectSyncEngine(AppContainer(applicationContext).database.dao(), remote)
+        // Use the application-level AppContainer so the Worker shares the single Room
+        // database instance already opened at startup. Creating a new AppContainer here
+        // would bypass the `lazy` singleton and open an additional connection to the same
+        // database file on every background run.
+        val app = applicationContext as? MacSenseApplication
+        if (app == null) {
+            AppLogger.e(TAG, "ApplicationContext is not MacSenseApplication; cannot access DB")
+            return Result.failure()
+        }
+        val engine = ProjectSyncEngine(app.container.database.dao(), remote)
         val result = engine.syncDirtyProjects()
         AppLogger.i(TAG, "sync run: uploaded=${result.uploaded} conflicts=${result.skippedConflicts} failed=${result.failed}")
         return if (result.failed == 0) Result.success() else Result.retry()
