@@ -26,9 +26,22 @@ jobs:
       - name: Inject secrets into .env
         run: |
           cp .env.example .env
-          echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> .env
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          # Append only secrets that are actually set. An unset secret would write a bare
+          # `KEY=`, and the secrets Gradle plugin turns that into
+          # `public static final String KEY = ;` — invalid Java that fails the build.
+          if [ -n "$SENTRY_DSN" ]; then
+            echo "SENTRY_DSN=$SENTRY_DSN" >> .env
+          fi
+          if [ -n "$SUPABASE_URL" ]; then
+            echo "SUPABASE_URL=$SUPABASE_URL" >> .env
+          fi
+          if [ -n "$SUPABASE_ANON_KEY" ]; then
+            echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
+          fi
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - run: ./gradlew testReleaseUnitTest --stacktrace
       - name: Upload test reports
         if: always()
@@ -56,9 +69,22 @@ jobs:
       - name: Inject secrets
         run: |
           cp .env.example .env
-          echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> .env
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          # Append only secrets that are actually set. An unset secret would write a bare
+          # `KEY=`, and the secrets Gradle plugin turns that into
+          # `public static final String KEY = ;` — invalid Java that fails the build.
+          if [ -n "$SENTRY_DSN" ]; then
+            echo "SENTRY_DSN=$SENTRY_DSN" >> .env
+          fi
+          if [ -n "$SUPABASE_URL" ]; then
+            echo "SUPABASE_URL=$SUPABASE_URL" >> .env
+          fi
+          if [ -n "$SUPABASE_ANON_KEY" ]; then
+            echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
+          fi
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Assemble signed release APK
         run: |
