@@ -26,7 +26,6 @@ import com.macsense.ai.audio.StemTrack
 import com.macsense.ai.audio.StemType
 import com.macsense.ai.audio.StemMixer
 import com.macsense.ai.audio.ProjectVersionTree
-import com.macsense.ai.export.GenomeArtifact
 import com.macsense.ai.export.GenomeArtifactCodec
 import com.macsense.ai.lyrics.LyricExporter
 import com.macsense.ai.lyrics.RhymeAnalyzer
@@ -417,8 +416,8 @@ class DawViewModel(
 
     // --- P5 flagship (issues #37, #61): cross-project Sound DNA export/import breeding ---
 
-    private val _lastExportedArtifact = MutableStateFlow<GenomeArtifact?>(null)
-    val lastExportedArtifact: StateFlow<GenomeArtifact?> = _lastExportedArtifact.asStateFlow()
+    private val _lastExportedArtifact = MutableStateFlow<String?>(null)
+    val lastExportedArtifact: StateFlow<String?> = _lastExportedArtifact.asStateFlow()
 
     private val _lastImportedEntry = MutableStateFlow<SoundArchive.Entry?>(null)
     val lastImportedEntry: StateFlow<SoundArchive.Entry?> = _lastImportedEntry.asStateFlow()
@@ -445,13 +444,12 @@ class DawViewModel(
                     AppLogger.w("DawViewModel", "export_genome: no genome for take $takeId")
                     return@launch
                 }
-                val artifact = GenomeArtifactCodec.encodeV2(
+                val artifact = GenomeArtifactCodec.export(
                     entry = entry,
-                    genome = entry.genome,
-                    allEntries = repo.getArchiveEntries(),
                     trackName = trackName,
                     creatorName = creatorName,
-                ).copy(createdAtMs = now)
+                    exportedAt = now,
+                )
                 withContext(Dispatchers.Main) { _lastExportedArtifact.value = artifact }
                 AppLogger.i("DawViewModel", "Exported Sound DNA for $takeId")
             } catch (e: Exception) {
@@ -473,7 +471,7 @@ class DawViewModel(
         }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val entry = GenomeArtifactCodec.importEntry(raw, newTakeId)
+                val entry = GenomeArtifactCodec.import(raw, newTakeId)
                 repo.upsertArchiveEntry(entry)
                 entry.genome?.let { repo.upsertSoundGenome(genomeProjectId, it) }
                 withContext(Dispatchers.Main) { _lastImportedEntry.value = entry }

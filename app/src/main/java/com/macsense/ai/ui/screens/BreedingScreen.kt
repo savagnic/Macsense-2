@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.macsense.ai.audio.SoundArchive
 import com.macsense.ai.ui.viewmodel.DawViewModel
-import com.macsense.ai.export.GenomeArtifact
+
 
 /**
  * Breeding Lab screen — Milestone 4.

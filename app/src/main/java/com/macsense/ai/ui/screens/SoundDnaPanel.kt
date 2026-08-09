@@ -2,6 +2,9 @@ package com.macsense.ai.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.macsense.ai.audio.SoundArchive
-import com.macsense.ai.export.GenomeArtifact
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.macsense.ai.ui.viewmodel.DawViewModel
 
@@ -29,13 +31,13 @@ import com.macsense.ai.ui.viewmodel.DawViewModel
  * Genome DNA export/import panel used inside BreedingScreen.
  *
  * Lets the user:
- * 1. Export a take's Sound DNA as a shareable artifact (JSON-serialized GenomeArtifact)
+ * 1. Export a take's Sound DNA as shareable text (MACSENSE_DNA_V1 payload)
  * 2. Import a raw DNA string back to create a new archive entry
  */
 @Composable
 fun SoundDnaPanel(
     selectedTakeId: String?,
-    exportedArtifact: GenomeArtifact?,
+    exportedArtifact: String?,
     importedEntry: SoundArchive.Entry?,
     onExport: (String) -> Unit,
     onImport: (String) -> Unit
@@ -89,10 +91,23 @@ fun SoundDnaPanel(
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("EXPORTED ARTIFACT", color = PurpleNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Track: ${artifact.trackName}", color = TextPrimary, fontSize = 12.sp)
-                        Text("Creator: ${artifact.creatorName}", color = TextSecondary, fontSize = 11.sp)
-                        Text("Version: ${artifact.version}", color = TextSecondary, fontSize = 11.sp)
-                        Text("ID: ${artifact.genomeId.take(16)}", color = TextSecondary, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                        Text(
+                            "Copy this Sound DNA and paste it into another project to breed with it.",
+                            color = TextSecondary, fontSize = 11.sp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        SelectionContainer {
+                            Text(
+                                artifact,
+                                color = TextPrimary, fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 160.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .testTag("exported_dna_text")
+                            )
+                        }
                     }
                 }
             }

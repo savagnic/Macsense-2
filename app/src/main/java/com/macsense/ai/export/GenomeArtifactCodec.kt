@@ -109,26 +109,63 @@ object GenomeArtifactCodec {
         return fromJson(String(decoded, Charsets.UTF_8))
     }
 
+    /** Marks an entry that arrived from another project, so the UI never passes it off as locally recorded. */
+    const val IMPORTED_TAG = "imported"
+
     /**
-     * Rebuilds an archive entry from a shared artifact so it can be bred against local sounds.
+     * Exports a take as shareable Sound DNA text.
      *
-     * The imported take keeps its own new id but records where it came from: [SoundArchive.Entry.originTakeId]
-     * points at the source take and the genome's parents carry the exported ancestry, so lineage
-     * survives crossing between projects.
+     * The payload carries the whole [SoundGenome] rather than a rounded trait summary, because the
+     * genome's own `sourceId`, `parents` and `confidence` are what make lineage meaningful once the
+     * sound crosses into someone else's project.
      *
-     * Throws when the payload is not a valid artifact, or when its traits are outside the range a
-     * genome permits. A malformed import must fail loudly rather than enter the archive as a
-     * plausible-looking sound with invented traits.
+     * Throws when the take has no genome: an export with invented traits would look identical to a
+     * measured one to whoever receives it.
      */
-    fun importEntry(raw: String, newTakeId: String): SoundArchive.Entry {
-        val artifact = fromJson(raw)
-        val ancestry = lineageOf(artifact)
+    fun export(
+        entry: SoundArchive.Entry,
+        trackName: String,
+        creatorName: String,
+        exportedAt: Long,
+    ): String {
+        val genome = requireNotNull(entry.genome) {
+            "Take ${entry.takeId} has no genome to export"
+        }
+        return GenomeShareableTrack.toShareableJson(
+            GenomeShareableTrack(
+                genome = genome,
+                trackName = trackName,
+                creatorName = creatorName,
+                exportedAt = exportedAt,
+                tags = entry.tags.toList(),
+                lineageSummary = "Parents: ${genome.parents.size}, Source: ${genome.sourceId}",
+            )
+        )
+    }
+
+    /**
+     * Rebuilds an archive entry from shared Sound DNA so it can be bred against local takes.
+     *
+     * The entry gets a fresh local id, but the genome is restored untouched — ancestry survives the
+     * project boundary intact. Malformed input throws rather than yielding a blank-but-plausible
+     * sound.
+     */
+    fun `import`(raw: String, newTakeId: String): SoundArchive.Entry {
+        require(raw.isNotBlank()) { "Sound DNA payload is empty" }
+        require(raw.contains(GenomeShareableTrack.MAGIC)) {
+            "Not a Sound DNA payload: missing ${GenomeShareableTrack.MAGIC} header"
+        }
+        val track = try {
+            GenomeShareableTrack.fromShareableJson(raw)
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Sound DNA payload is not readable", e)
+        }
         return SoundArchive.Entry(
             takeId = newTakeId,
-            state = SoundArchive.State.REBORN,
-            tags = artifact.tags.filterNot { it.startsWith(LINEAGE_TAG_PREFIX) }.toSet(),
-            genome = artifact.genomeData.toGenomeOrNull(sourceId = newTakeId, parents = ancestry),
-            originTakeId = artifact.takeId,
+            state = SoundArchive.State.LIVING,
+            tags = track.tags.toSet() + IMPORTED_TAG,
+            genome = track.genome,
+            originTakeId = track.genome.sourceId,
         )
     }
 
