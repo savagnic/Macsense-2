@@ -145,7 +145,12 @@ object RetrofitClient {
 
 /**
  * Suspends with exponential backoff retries around a Gemini call at the call-site level,
- * complementing the OkHttp-level RetryInterceptor with coroutine-friendly retry semantics
+ * complementing the OkHttp-level [RetryInterceptor] with coroutine-friendly retry semantics
+ *
+ * **Retry budget**: [RetryInterceptor] already retries up to `maxRetries` times (default 3) at
+ * the HTTP layer for 429/5xx/network errors. This function adds a second layer on top for
+ * serialization or other non-HTTP exceptions. Callers should keep [maxAttempts] low (default 2)
+ * to avoid excessive total request counts (max = [maxAttempts] × (RetryInterceptor.maxRetries+1)).
  * for logic that needs to react to specific exception types (e.g. offline fallback).
  */
 suspend fun <T> withGeminiRetry(
