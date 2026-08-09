@@ -874,7 +874,7 @@ class DawViewModel(
             if (!validation.isGeminiKeyConfigured) {
                 delay(1200)
                 val (reply, cmd) = generateOfflineAriResponse(userText)
-                launch(Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
                     val finalLog = _ariChatLog.value.toMutableList()
                     finalLog.add(ChatMessage("assistant", "$LOCAL_AUTOMATION_PREFIX$reply", cmd))
                     _ariChatLog.value = finalLog
@@ -923,7 +923,7 @@ class DawViewModel(
                     
                     val (cleanText, cmd) = AriCommandParser.parse(rawText)
                     
-                    launch(Dispatchers.Main) {
+                    withContext(Dispatchers.Main) {
                         val finalLog = _ariChatLog.value.toMutableList()
                         finalLog.add(ChatMessage("assistant", cleanText, cmd))
                         _ariChatLog.value = finalLog
@@ -933,7 +933,7 @@ class DawViewModel(
                     AppLogger.e("DawViewModel", "Ari cloud pipeline failed, falling back to offline brain", e)
                     delay(1000)
                     val (reply, cmd) = generateOfflineAriResponse(userText)
-                    launch(Dispatchers.Main) {
+                    withContext(Dispatchers.Main) {
                         val finalLog = _ariChatLog.value.toMutableList()
                         finalLog.add(ChatMessage("assistant", "$LOCAL_AUTOMATION_PREFIX$reply", cmd))
                         _ariChatLog.value = finalLog
