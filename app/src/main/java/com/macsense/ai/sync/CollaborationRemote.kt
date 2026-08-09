@@ -4,6 +4,7 @@ import com.macsense.ai.data.local.ProjectEntity
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -14,10 +15,14 @@ import okhttp3.RequestBody.Companion.toRequestBody
 // ============================================================
 
 /**
- * A single async comment on a project, stored in Supabase `project_comments` table.
+ * The Supabase wire shape for a comment row in the `project_comments` table.
+ *
+ * Named Cloud* to match CloudProject and to keep it distinct from the domain model
+ * ProjectComment in CollaborationModels.kt, which is anchored to sections/stems/lyrics
+ * rather than to a table row. Both existed under one name and the package would not compile.
  */
 @Serializable
-data class ProjectComment(
+data class CloudProjectComment(
     @SerialName("id") val id: String? = null,
     @SerialName("project_local_id") val projectLocalId: String,
     @SerialName("author_id") val authorId: String,
@@ -59,8 +64,8 @@ data class ProjectBranch(
 // ============================================================
 
 interface CollaborationRemote {
-    suspend fun postComment(comment: ProjectComment): ProjectComment
-    suspend fun fetchComments(projectLocalId: String): List<ProjectComment>
+    suspend fun postComment(comment: CloudProjectComment): CloudProjectComment
+    suspend fun fetchComments(projectLocalId: String): List<CloudProjectComment>
     suspend fun shareProject(share: ProjectShare): ProjectShare
     suspend fun fetchShares(projectLocalId: String): List<ProjectShare>
     suspend fun pushBranch(branch: ProjectBranch): ProjectBranch
@@ -85,12 +90,12 @@ class SupabaseCollaborationRemote(
         "Content-Type" to "application/json"
     )
 
-    override suspend fun postComment(comment: ProjectComment): ProjectComment =
-        upsertRow("project_comments", json.encodeToString(ProjectComment.serializer(), comment))
+    override suspend fun postComment(comment: CloudProjectComment): CloudProjectComment =
+        upsertRow("project_comments", json.encodeToString(CloudProjectComment.serializer(), comment))
 
-    override suspend fun fetchComments(projectLocalId: String): List<ProjectComment> =
+    override suspend fun fetchComments(projectLocalId: String): List<CloudProjectComment> =
         fetchRows("project_comments?project_local_id=eq.$projectLocalId&order=created_at_ms.asc",
-            kotlinx.serialization.builtins.ListSerializer(ProjectComment.serializer()))
+            kotlinx.serialization.builtins.ListSerializer(CloudProjectComment.serializer()))
 
     override suspend fun shareProject(share: ProjectShare): ProjectShare =
         upsertRow("project_shares", json.encodeToString(ProjectShare.serializer(), share))
