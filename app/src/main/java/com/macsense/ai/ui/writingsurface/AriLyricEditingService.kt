@@ -10,20 +10,36 @@ import com.macsense.ai.api.withGeminiRetry
 import com.macsense.ai.telemetry.AppLogger
 import com.macsense.ai.telemetry.StartupValidator
 
+/**
+ * Result of a lyric edit.
+ *
+ * [isLocalAutomation] is carried alongside the text rather than prefixed onto it. The text is
+ * substituted straight into the user's lyrics when they accept the diff, so a "[Local automation]"
+ * banner inside it would end up as a line in the song. The caller shows the label on the diff
+ * instead, which keeps the promise that offline output is never passed off as a cloud AI response.
+ */
+data class LyricEdit(val text: String, val isLocalAutomation: Boolean)
+
 class AriLyricEditingService {
 
+    /** Returns just the edited text. See [requestLyricEditDetailed] to also learn where it came from. */
     suspend fun requestLyricEdit(
+        selectedText: String,
+        action: String,
+        artistIdentity: String
+    ): String = requestLyricEditDetailed(selectedText, action, artistIdentity).text
+
+    suspend fun requestLyricEditDetailed(
         selectedText: String,
         action: String, // "Rewrite", "Make more aggressive", "Improve rhyme", "Better cadence", "Change flow"
         artistIdentity: String // e.g. "Grimy Boom-Bap", "Aggressive Trap", "Melodic R&B", "Poetic Folk"
-    ): String {
+    ): LyricEdit {
         val apiKey = BuildConfig.GEMINI_API_KEY
         val validation = StartupValidator.validateGeminiKey(apiKey)
 
         if (!validation.isGeminiKeyConfigured) {
             AppLogger.i("AriLyricEditingService", "GEMINI_API_KEY is not configured. Running deterministic local edit.")
-            return "[Local automation — no cloud AI response] " +
-                generateOfflineEdit(selectedText, action, artistIdentity)
+            return LyricEdit(generateOfflineEdit(selectedText, action, artistIdentity), isLocalAutomation = true)
         }
 
         return try {
@@ -57,15 +73,13 @@ class AriLyricEditingService {
             val result = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
             if (result.isNullOrEmpty()) {
                 AppLogger.w("AriLyricEditingService", "Received empty response from Gemini, falling back to offline.")
-                "[Local automation — no cloud AI response] " +
-                    generateOfflineEdit(selectedText, action, artistIdentity)
+                LyricEdit(generateOfflineEdit(selectedText, action, artistIdentity), isLocalAutomation = true)
             } else {
-                result
+                LyricEdit(result, isLocalAutomation = false)
             }
         } catch (e: Exception) {
             AppLogger.e("AriLyricEditingService", "Failed online lyric edit, falling back to offline.", e)
-            "[Local automation — no cloud AI response] " +
-                generateOfflineEdit(selectedText, action, artistIdentity)
+            LyricEdit(generateOfflineEdit(selectedText, action, artistIdentity), isLocalAutomation = true)
         }
     }
 

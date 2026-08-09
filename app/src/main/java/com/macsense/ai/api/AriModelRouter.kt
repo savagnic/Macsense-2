@@ -8,8 +8,11 @@ enum class ModelTier(val modelName: String, val endpointUrl: String) {
         endpointUrl = "v1beta/models/gemini-2.0-flash:generateContent"
     ),
     CREATIVE(
-        modelName = "gemini-2.0-flash",
-        endpointUrl = "v1beta/models/gemini-2.0-flash:generateContent"
+        // Lyrics, arrangement and genome work go to the stronger model. Pointing this at the same
+        // flash model as FAST made the whole routing layer decorative: every "creative" decision
+        // resolved to the identical request.
+        modelName = "gemini-2.5-pro",
+        endpointUrl = "v1beta/models/gemini-2.5-pro:generateContent"
     )
 }
 

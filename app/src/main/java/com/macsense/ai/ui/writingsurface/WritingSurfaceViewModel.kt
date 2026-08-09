@@ -73,6 +73,14 @@ class WritingSurfaceViewModel(
     private val _diffSuggested = MutableStateFlow("")
     val diffSuggested: StateFlow<String> = _diffSuggested.asStateFlow()
 
+    /**
+     * True when the pending suggestion came from deterministic local automation rather than a cloud
+     * AI response. The diff UI labels it; the label is deliberately not part of [diffSuggested],
+     * which gets substituted verbatim into the user's lyrics on accept.
+     */
+    private val _diffIsLocalAutomation = MutableStateFlow(false)
+    val diffIsLocalAutomation: StateFlow<Boolean> = _diffIsLocalAutomation.asStateFlow()
+
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
 
@@ -129,13 +137,15 @@ class WritingSurfaceViewModel(
         _isGenerating.value = true
         viewModelScope.launch {
             try {
-                val suggestion = editingService.requestLyricEdit(
+                val edit = editingService.requestLyricEditDetailed(
                     selectedText = selection.text,
                     action = action,
                     artistIdentity = _artistIdentity.value
                 )
+                val suggestion = edit.text
                 _diffOriginal.value = selection
                 _diffSuggested.value = suggestion
+                _diffIsLocalAutomation.value = edit.isLocalAutomation
                 _isDiffVisible.value = true
 
                 // Save to Saved Requests list
@@ -168,6 +178,7 @@ class WritingSurfaceViewModel(
         _isDiffVisible.value = false
         _diffOriginal.value = null
         _diffSuggested.value = ""
+        _diffIsLocalAutomation.value = false
         _selectedTextSpan.value = null
     }
 
@@ -175,6 +186,7 @@ class WritingSurfaceViewModel(
         _isDiffVisible.value = false
         _diffOriginal.value = null
         _diffSuggested.value = ""
+        _diffIsLocalAutomation.value = false
     }
 
     fun sendMessageToAri(userText: String) {
