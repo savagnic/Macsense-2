@@ -109,6 +109,29 @@ object GenomeArtifactCodec {
         return fromJson(String(decoded, Charsets.UTF_8))
     }
 
+    /**
+     * Rebuilds an archive entry from a shared artifact so it can be bred against local sounds.
+     *
+     * The imported take keeps its own new id but records where it came from: [SoundArchive.Entry.originTakeId]
+     * points at the source take and the genome's parents carry the exported ancestry, so lineage
+     * survives crossing between projects.
+     *
+     * Throws when the payload is not a valid artifact, or when its traits are outside the range a
+     * genome permits. A malformed import must fail loudly rather than enter the archive as a
+     * plausible-looking sound with invented traits.
+     */
+    fun importEntry(raw: String, newTakeId: String): SoundArchive.Entry {
+        val artifact = fromJson(raw)
+        val ancestry = lineageOf(artifact)
+        return SoundArchive.Entry(
+            takeId = newTakeId,
+            state = SoundArchive.State.REBORN,
+            tags = artifact.tags.filterNot { it.startsWith(LINEAGE_TAG_PREFIX) }.toSet(),
+            genome = artifact.genomeData.toGenomeOrNull(sourceId = newTakeId, parents = ancestry),
+            originTakeId = artifact.takeId,
+        )
+    }
+
     private fun buildLineage(
         takeId: String,
         all: List<SoundArchive.Entry>
@@ -133,6 +156,27 @@ object GenomeArtifactCodec {
  * exported — a trait that was never measured must not be invented here, because an importer
  * cannot tell a guessed value from a measured one once it is in the artifact.
  */
+/**
+ * Reverse of [toMap]. Returns null when the artifact carries no measured traits, so an entry
+ * imported without a genome is honestly genome-less rather than silently defaulted to zeros.
+ */
+private fun Map<String, Float>.toGenomeOrNull(sourceId: String, parents: List<String>): SoundGenome? {
+    val transient = this["transient"] ?: return null
+    val harmonicity = this["harmonicity"] ?: return null
+    val brightness = this["brightness"] ?: return null
+    val dynamics = this["dynamics"] ?: return null
+    return SoundGenome(
+        sourceId = sourceId,
+        transient = transient.toDouble(),
+        harmonicity = harmonicity.toDouble(),
+        brightness = brightness.toDouble(),
+        dynamics = dynamics.toDouble(),
+        stereoWidth = (this["stereo_width"] ?: 0.0f).toDouble(),
+        confidence = (this["confidence"] ?: 1.0f).toDouble(),
+        parents = parents,
+    )
+}
+
 private fun SoundGenome.toMap(): Map<String, Float> = mapOf(
     "transient" to transient.toFloat(),
     "harmonicity" to harmonicity.toFloat(),

@@ -108,6 +108,8 @@ dependencies {
  implementation(libs.androidx.ui.graphics)
  implementation(libs.androidx.ui.tooling.preview)
  implementation(libs.androidx.material3)
+ // Mic and other icons outside the small core set (VocalScanner, FlowCapture).
+ implementation(libs.androidx.material.icons.extended)
 
  // Room components
  implementation(libs.androidx.room.runtime)

@@ -1,6 +1,7 @@
 package com.macsense.ai.ui.viewmodel
 
 import com.macsense.ai.audio.StemTrack
+import androidx.lifecycle.viewModelScope
 import com.macsense.ai.data.local.ClipEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -32,7 +33,7 @@ fun DawViewModel.restoreClips(clipsBySection: Map<String, List<ClipEntity>>) {
     val repo = repository ?: return
     viewModelScope.launch(Dispatchers.IO) {
         for ((sectionId, clips) in clipsBySection) {
-            repo.clearSectionClips(sectionId)
+            repo.deleteClipsForSection(sectionId)
             for (clip in clips) repo.upsertClip(clip)
         }
     }

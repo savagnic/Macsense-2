@@ -3,6 +3,7 @@ package com.macsense.ai.ui.writingsurface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.macsense.ai.BuildConfig
+import com.macsense.ai.api.ModelTier
 import com.macsense.ai.api.RetrofitClient
 import com.macsense.ai.api.GenerateContentRequest
 import com.macsense.ai.api.Content as ApiContent
