@@ -5,6 +5,7 @@ import com.macsense.ai.BuildConfig
 import com.macsense.ai.di.AppContainer
 import com.macsense.ai.sync.ProjectSyncWorker
 import com.macsense.ai.sync.SupabasePostgrestRemote
+import com.macsense.ai.sync.SupabaseSessionProvider
 import com.macsense.ai.telemetry.AppLogger
 import com.macsense.ai.telemetry.CrashReportingInstaller
 import com.macsense.ai.telemetry.NoOpCrashReporter
@@ -38,10 +39,14 @@ class MacSenseApplication : Application() {
         // Cloud backup is only available when the full Supabase configuration validates:
         // HTTPS project URL, public anon key, and a real authenticated user token. Anything
         // less keeps the installation local-only rather than pretending sync works.
+        //
+        // The user token comes from the runtime session, never from build config, so a
+        // release artifact cannot ship someone else's credential. With no sign-in flow yet
+        // this is always absent and every install is local-only by design.
         val supabase = StartupValidator.validateSupabase(
             BuildConfig.SUPABASE_URL,
             BuildConfig.SUPABASE_ANON_KEY,
-            BuildConfig.SUPABASE_ACCESS_TOKEN,
+            SupabaseSessionProvider.currentAccessToken() ?: "",
         )
         ProjectSyncWorker.remoteFactory = if (supabase.isConfigured) {
             {

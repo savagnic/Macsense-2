@@ -36,8 +36,11 @@ android {
  // Supabase sync credentials injected from .env / CI secrets; blank = offline-only build.
  buildConfigField("String", "SUPABASE_URL", "\"${findProperty("SUPABASE_URL") ?: ""}\"")
  buildConfigField("String", "SUPABASE_ANON_KEY", "\"${findProperty("SUPABASE_ANON_KEY") ?: ""}\"")
- // Authenticated user session token; blank keeps cloud backup unavailable (local-only).
- buildConfigField("String", "SUPABASE_ACCESS_TOKEN", "\"${findProperty("SUPABASE_ACCESS_TOKEN") ?: ""}\"")
+ // NOTE: there is deliberately no SUPABASE_ACCESS_TOKEN build field. A user session token
+ // must never be compiled into a shipped artifact — it would be a shared, long-lived
+ // credential belonging to whoever ran the build, readable by anyone who unzips the APK.
+ // The token is supplied at runtime by SupabaseSessionProvider once a real authenticated
+ // session exists; until then the install stays local-only.
 
  ndk {
  abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

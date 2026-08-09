@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+   MA¢SENSE is local-first: a user's takes, recordings, projects, and genome data never
+   leave the device automatically.
+
+   This file governs Android's legacy auto-backup (API 30 and below). Every app-private
+   domain is excluded so that no MA¢SENSE data is copied to Google's backup transport
+   without an explicit, user-initiated export.
+
+   android:allowBackup="false" in AndroidManifest.xml is the primary control; these rules
+   are a defence-in-depth backstop so the policy still holds if backup is ever re-enabled.
+
+   See data_extraction_rules.xml for the API 31+ equivalent (cloud backup + device transfer).
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- Room database (projects, takes, genome, session memory). -->
+    <exclude domain="database" path="." />
+    <!-- Recorded PCM audio, exports, and cached takes. -->
+    <exclude domain="file" path="." />
+    <!-- Preferences, including any locally held session state. -->
+    <exclude domain="sharedpref" path="." />
+    <!-- App-private external storage (exports staged for sharing). -->
+    <exclude domain="external" path="." />
+    <exclude domain="root" path="." />
 </full-backup-content>
