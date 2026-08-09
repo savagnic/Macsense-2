@@ -10,15 +10,17 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Regression test for PRODUCTION_GAP_ANALYSIS.md item A: "Room migration strategy exists
- * (MIGRATION_1_2) but has no destructive-migration fallback declared, so a missed migration in a
- * future release would crash on upgrade."
+ * Regression test for the "missed migration" scenario: Room throws [IllegalStateException] when
+ * a database file is reopened against a higher schema version with no migration path and no
+ * `fallbackToDestructiveMigration()` configured.
  *
- * This opens a database file at the CURRENT schema version, then reopens the *same file* against
- * a database class declaring a higher version with NO migration registered for that jump —
- * simulating exactly the "missed migration" scenario the gap analysis warns about. Without
- * `fallbackToDestructiveMigration()`, Room throws `IllegalStateException` here. With it wired (as
- * in [com.macsense.ai.di.AppContainer]), the database recreates its schema instead of crashing.
+ * This test documents two behaviors:
+ * 1. Without fallback → the upgrade throws, which is the correct and expected fail-closed behavior
+ *    in [com.macsense.ai.di.AppContainer] (user data is preserved; the app fails loudly rather
+ *    than silently wiping projects).
+ * 2. With explicit fallback → the database recreates its schema, shown here so recovery tooling
+ *    can reference the pattern. AppContainer intentionally does NOT configure this fallback in
+ *    production because destroying user projects is worse than a clean upgrade failure.
  */
 @RunWith(RobolectricTestRunner::class)
 class DestructiveMigrationFallbackTest {
@@ -74,8 +76,8 @@ class DestructiveMigrationFallbackTest {
         original.openHelper.writableDatabase
         original.close()
 
-        // Same missed-migration scenario as above, but this time with the fallback that
-        // AppContainer now configures in production.
+        // Same missed-migration scenario as above, but this time with the fallback explicitly
+        // enabled — demonstrating the recovery path that tooling can use if needed.
         val recovered = Room.databaseBuilder(context, FutureVersionDatabaseNoFallback::class.java, dbName)
             .fallbackToDestructiveMigration()
             .build()
