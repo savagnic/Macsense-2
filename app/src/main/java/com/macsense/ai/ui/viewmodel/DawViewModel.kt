@@ -1129,15 +1129,20 @@ class DawViewModel(
         """.trimIndent()
     }
 
+    /**
+     * Deterministic local Ari responses used when Gemini is not configured or the cloud call
+     * fails. Returns clean body text only — the [LOCAL_AUTOMATION_PREFIX] label is prepended by
+     * the caller so it appears once in the chat message, not embedded in the text itself (which
+     * would cause double-labeling and would land in the lyrics if the user accepts a diff).
+     */
     private fun generateOfflineAriResponse(userText: String): Pair<String, AriCommand?> {
         val textLower = userText.lowercase()
-        val warning =
-            "[Local automation — no cloud AI response. Configure GEMINI_API_KEY for cloud responses.]\n\n"
+
         
         return when {
             textLower.contains("bpm") || textLower.contains("speed") || textLower.contains("tempo") || textLower.contains("fast") || textLower.contains("slow") -> {
                 val newBpm = if (_bpm.value < 130) 140.0 else 115.0
-                val text = warning + "yeah, current tempo is ${_bpm.value} BPM. sluggish. we need to ramp it up to $newBpm to make those bars snap. i've queued an executive BPM change. apply my cut below."
+                val text = "yeah, current tempo is ${_bpm.value} BPM. sluggish. we need to ramp it up to $newBpm to make those bars snap. i've queued an executive BPM change. apply my cut below."
                 val cmd = AriCommand(
                     type = "update_bpm",
                     bpm_value = newBpm,
@@ -1147,7 +1152,7 @@ class DawViewModel(
             }
             textLower.contains("lyrics") || textLower.contains("verse") || textLower.contains("words") || textLower.contains("hook") || textLower.contains("write") -> {
                 val activeSection = _sections.value.firstOrNull { it.isExpanded } ?: _sections.value.first()
-                val text = warning + "lookin at your lyrics for ${activeSection.name}. they lack weight. let's rewrite it with some modern bounce. queued up a custom lyric block. check it out below."
+                val text = "lookin at your lyrics for ${activeSection.name}. they lack weight. let's rewrite it with some modern bounce. queued up a custom lyric block. check it out below."
                 val cmd = AriCommand(
                     type = "update_lyrics",
                     section_id = activeSection.id,
@@ -1163,7 +1168,7 @@ class DawViewModel(
                 } else {
                     listOf("intro", "verse1", "hook", "bridge", "outro")
                 }
-                val text = warning + "structure is predictable, rookie. let's throw the listener straight into the fire by reordering. i queued a structural flip."
+                val text = "structure is predictable, rookie. let's throw the listener straight into the fire by reordering. i queued a structural flip."
                 val cmd = AriCommand(
                     type = "reorder_sections",
                     section_order = newOrder,
@@ -1173,7 +1178,7 @@ class DawViewModel(
             }
             textLower.contains("drum") || textLower.contains("preset") || textLower.contains("pattern") || textLower.contains("beat") || textLower.contains("sequence") -> {
                 val activeSection = _sections.value.firstOrNull { it.isExpanded } ?: _sections.value.first()
-                val text = warning + "drums are soft. i'm injecting a heavy 'Trap 16ths' sequence into ${activeSection.name} to make it knock. apply it below."
+                val text = "drums are soft. i'm injecting a heavy 'Trap 16ths' sequence into ${activeSection.name} to make it knock. apply it below."
                 val cmd = AriCommand(
                     type = "apply_preset",
                     section_id = activeSection.id,
@@ -1184,7 +1189,7 @@ class DawViewModel(
             }
             textLower.contains("reverb") || textLower.contains("delay") || textLower.contains("effect") || textLower.contains("filter") -> {
                 val activeSection = _sections.value.firstOrNull { it.isExpanded } ?: _sections.value.first()
-                val text = warning + "your mix on ${activeSection.name} is dry. let's wash it in 50% reverb and 30% delay to create some real studio space."
+                val text = "your mix on ${activeSection.name} is dry. let's wash it in 50% reverb and 30% delay to create some real studio space."
                 val cmd = AriCommand(
                     type = "update_effects",
                     section_id = activeSection.id,
@@ -1197,15 +1202,15 @@ class DawViewModel(
                 Pair(text, cmd)
             }
             textLower.contains("breed") || textLower.contains("cross") || textLower.contains("genome") || textLower.contains("genetic") -> {
-                val text = warning + "you want genetics, rookie? point me at two takes in your archive and give me their ids — i'll cross their genomes and hand you a hybrid with the best of both."
+                val text = "you want genetics, rookie? point me at two takes in your archive and give me their ids — i'll cross their genomes and hand you a hybrid with the best of both."
                 Pair(text, null)
             }
             textLower.contains("resurrect") || textLower.contains("revive") || textLower.contains("bring back") || textLower.contains("dead") || textLower.contains("dormant") -> {
-                val text = warning + "nothing's really dead in this studio, just dormant. give me the take id and i'll pull it back into rotation, genome and all."
+                val text = "nothing's really dead in this studio, just dormant. give me the take id and i'll pull it back into rotation, genome and all."
                 Pair(text, null)
             }
             else -> {
-                val text = warning + "what's up rookie. i'm analyzing your project at ${_bpm.value} BPM with ${_sections.value.size} active sections. honestly? it's alright, but it's not a hit yet. ask me to speed up the beat, rewrite your lyrics, breed two of your archived takes, or resurrect an old one."
+                val text = "what's up rookie. i'm analyzing your project at ${_bpm.value} BPM with ${_sections.value.size} active sections. honestly? it's alright, but it's not a hit yet. ask me to speed up the beat, rewrite your lyrics, breed two of your archived takes, or resurrect an old one."
                 Pair(text, null)
             }
         }
