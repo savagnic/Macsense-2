@@ -82,6 +82,16 @@ class AriSessionMemoryTest {
     }
 
     @Test
+    fun `prior command history is bounded to avoid unbounded memory growth`() {
+        val memory = AriSessionMemory(maxCommandHistorySize = 3)
+        val cmd = AriCommand(type = "update_bpm", bpm_value = 120.0, explanation = "test")
+        repeat(5) { memory.addCommand(cmd) }
+
+        // Should be capped at 3, not 5.
+        assertEquals(3, memory.priorCommands.size)
+    }
+
+    @Test
     fun `clear resets all session memory state`() {
         val memory = AriSessionMemory(genre = "R&B", key = "A Major", mood = "Smooth")
         memory.addCommand(AriCommand(type = "apply_preset", explanation = "Apply smooth preset"))
