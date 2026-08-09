@@ -229,7 +229,12 @@ fun VocalScannerScreen() {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text("✓ PRESET APPLIED: ${selectedMode.uppercase()}", color = GreenActive, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text("AutoTune ${autoTuneSpeed.toInt()}ms • EQ ${eqLow>0?"+":""}${String.format("%.1f",eqLow)}/${eqMid>0?"+":""}${String.format("%.1f",eqMid)}/${eqHigh>0?"+":""}${String.format("%.1f",eqHigh)} dB • Comp ${compThreshold.toInt()}dBFS ${String.format("%.1f",compRatio)}:1 • Rev ${reverbMix.toInt()}%",
+                            // Kotlin has no C-style ternary; boosts are shown with an explicit
+                            // "+" so a +3.0/-3.0 dB move is readable at a glance.
+                            val eqSummary = listOf(eqLow, eqMid, eqHigh).joinToString("/") { db ->
+                                (if (db > 0) "+" else "") + String.format("%.1f", db)
+                            }
+                            Text("AutoTune ${autoTuneSpeed.toInt()}ms • EQ $eqSummary dB • Comp ${compThreshold.toInt()}dBFS ${String.format("%.1f", compRatio)}:1 • Rev ${reverbMix.toInt()}%",
                                 color = TextSecondary, fontSize = 11.sp, fontFamily = FontFamily.Monospace
                             )
                         }
