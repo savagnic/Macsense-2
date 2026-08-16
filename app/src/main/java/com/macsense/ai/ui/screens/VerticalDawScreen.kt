@@ -46,16 +46,6 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
-// Colors
-val BackgroundDark = Color(0xFF0A0A12)
-val SurfaceDark = Color(0xFF141424)
-val SurfaceSubtle = Color(0xFF1E1E34)
-val PurpleNeon = Color(0xFF8B5CF6)
-val MagentaNeon = Color(0xFFD946EF)
-val CyanNeon = Color(0xFF06B6D4)
-val GreenActive = Color(0xFF10B981)
-val TextPrimary = Color(0xFFF3F4F6)
-val TextSecondary = Color(0xFF9CA3AF)
 
 /**
  * Displays the main vertical digital audio workstation interface.

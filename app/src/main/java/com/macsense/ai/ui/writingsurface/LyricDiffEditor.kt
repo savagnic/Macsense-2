@@ -24,7 +24,9 @@ fun LyricDiffEditor(
     suggestedText: String,
     onAccept: () -> Unit,
     onReject: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Shows the suggestion as deterministic local automation so it is never mistaken for cloud AI. */
+    isLocalAutomation: Boolean = false
 ) {
     Card(
         modifier = modifier
@@ -51,13 +53,14 @@ fun LyricDiffEditor(
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    text = "PREVIEW MODE",
+                    text = if (isLocalAutomation) "LOCAL AUTOMATION — NOT CLOUD AI" else "PREVIEW MODE",
                     color = MacsenseTextSecondary,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier
                         .background(MacsenseCardPurple, RoundedCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .testTag("diff_source_badge")
                 )
             }
 

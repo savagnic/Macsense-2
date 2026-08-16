@@ -32,7 +32,8 @@ class CollaborationModelsTest {
         val proposal = BranchProposal(
             id = "prop-1", projectId = "proj-1", branchId = "branch-1",
             proposerUserId = "user-1", proposerName = "Alice",
-            title = "New hook melody", description = "Try this"
+            title = "New hook melody", description = "Try this",
+            createdAt = 1_700_000_000_000L
         )
         assertEquals(BranchProposal.ProposalStatus.PENDING, proposal.status)
         assertNull(proposal.reviewedAt)

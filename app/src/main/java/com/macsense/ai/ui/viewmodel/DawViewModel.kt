@@ -86,7 +86,7 @@ fun createDefaultGrid(): Map<String, List<Boolean>> {
 class DawViewModel(
     private val meterEngine: LiveMeterEngine = LiveMeterEngine(),
     private val nativePlayback: NativePlaybackEngine = NativePlaybackEngine(),
-    private val repository: MacSenseRepository? = null,
+    internal val repository: MacSenseRepository? = null,
     private val genomeProjectId: String = "default-project",
     private val breeder: SoundBreeder = SoundBreeder()
 ) : ViewModel() {
@@ -96,7 +96,7 @@ class DawViewModel(
     private val _barPosition = MutableStateFlow(1)
     val barPosition: StateFlow<Int> = _barPosition.asStateFlow()
     
-    private val _sections = MutableStateFlow(listOf(
+    internal val _sections = MutableStateFlow(listOf(
         SectionInfo("intro", "Intro", barCount = 4, label = SectionLabel.INTRO),
         SectionInfo("verse1", "Verse 1", barCount = 16, label = SectionLabel.VERSE),
         SectionInfo("hook", "Hook", barCount = 8, label = SectionLabel.HOOK),
@@ -105,7 +105,7 @@ class DawViewModel(
     ))
     val sections: StateFlow<List<SectionInfo>> = _sections.asStateFlow()
 
-    private val _clipsBySection = MutableStateFlow<Map<String, List<ClipEntity>>>(emptyMap())
+    internal val _clipsBySection = MutableStateFlow<Map<String, List<ClipEntity>>>(emptyMap())
     /**
      * Durable timeline clips keyed by section id. This is the first VM-level consumer of the
      * Phase 2 `ClipEntity` schema: the UI can now observe actual persisted clip placements instead
@@ -114,7 +114,7 @@ class DawViewModel(
     val clipsBySection: StateFlow<Map<String, List<ClipEntity>>> = _clipsBySection.asStateFlow()
     
     // --- Phase 4 (issue #39): typed stem tracks with per-stem gain/mute/solo ---
-    private val _stemTracks = MutableStateFlow(
+    internal val _stemTracks = MutableStateFlow(
         StemType.values().map { type -> StemTrack(id = type.name.lowercase(), type = type) }
     )
     val stemTracks: StateFlow<List<StemTrack>> = _stemTracks.asStateFlow()
@@ -124,7 +124,7 @@ class DawViewModel(
         get() = StemMixer.effectiveGains(_stemTracks.value)
 
     // --- Phase 4 (issue #39): loop region state (waveform interaction: tap to set loop points) ---
-    private val _loopRegion = MutableStateFlow<Pair<Int, Int>?>(null)
+    internal val _loopRegion = MutableStateFlow<Pair<Int, Int>?>(null)
     val loopRegion: StateFlow<Pair<Int, Int>?> = _loopRegion.asStateFlow()
 
     // --- Phase 4 (issue #39): A/B version branching over persisted VersionNodeEntity rows ---
@@ -444,10 +444,12 @@ class DawViewModel(
                     AppLogger.w("DawViewModel", "export_genome: no genome for take $takeId")
                     return@launch
                 }
-                val lineage = SoundLineage(repo.getArchiveEntries())
-                val summary = lineage.ancestors(takeId).joinToString(" -> ") { it.takeId }
-                    .ifEmpty { null }
-                val artifact = GenomeArtifactCodec.export(entry, trackName, creatorName, now, summary)
+                val artifact = GenomeArtifactCodec.export(
+                    entry = entry,
+                    trackName = trackName,
+                    creatorName = creatorName,
+                    exportedAt = now,
+                )
                 withContext(Dispatchers.Main) { _lastExportedArtifact.value = artifact }
                 AppLogger.i("DawViewModel", "Exported Sound DNA for $takeId")
             } catch (e: Exception) {

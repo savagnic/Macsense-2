@@ -59,7 +59,11 @@ object GenomeArtifactCodec {
     )
 
     /**
-     * V2.0: embeds the full lineage chain as a nested JSON blob inside genomeData.
+     * V2.0: carries the take's ancestry alongside its traits.
+     *
+     * genomeData holds numeric traits only, so the chain travels as ordered
+     * `lineage:<takeId>` tags, oldest ancestor first, ending with this take. That keeps the
+     * artifact a single flat JSON document that an importer can walk without a nested parse.
      */
     fun encodeV2(
         entry: SoundArchive.Entry,
@@ -69,19 +73,21 @@ object GenomeArtifactCodec {
         creatorName: String
     ): GenomeArtifact {
         val lineageChain = buildLineage(entry.takeId, allEntries)
-        val lineageJson = json.encodeToString(
-            kotlinx.serialization.builtins.ListSerializer(
-                kotlinx.serialization.builtins.serializer<String>()
-            ),
-            lineageChain.map { it.takeId }
-        )
         val base = encodeV1(entry, genome, trackName, creatorName)
         return base.copy(
             version = "2.0",
-            genomeData = base.genomeData + mapOf("lineage_json_len" to lineageChain.size.toFloat()),
-            tags = base.tags + listOf("v2", "lineage")
+            genomeData = base.genomeData + mapOf("lineage_depth" to lineageChain.size.toFloat()),
+            tags = base.tags + listOf("v2", "lineage") + lineageChain.map { "$LINEAGE_TAG_PREFIX${it.takeId}" }
         )
     }
+
+    /** Prefix marking an ancestry entry in [GenomeArtifact.tags]. */
+    const val LINEAGE_TAG_PREFIX = "lineage:"
+
+    /** Reads the ancestry chain back out of an artifact, oldest ancestor first. */
+    fun lineageOf(artifact: GenomeArtifact): List<String> =
+        artifact.tags.filter { it.startsWith(LINEAGE_TAG_PREFIX) }
+            .map { it.removePrefix(LINEAGE_TAG_PREFIX) }
 
     /** Serializes a [GenomeArtifact] to JSON string. */
     fun toJson(artifact: GenomeArtifact): String =
@@ -103,6 +109,66 @@ object GenomeArtifactCodec {
         return fromJson(String(decoded, Charsets.UTF_8))
     }
 
+    /** Marks an entry that arrived from another project, so the UI never passes it off as locally recorded. */
+    const val IMPORTED_TAG = "imported"
+
+    /**
+     * Exports a take as shareable Sound DNA text.
+     *
+     * The payload carries the whole [SoundGenome] rather than a rounded trait summary, because the
+     * genome's own `sourceId`, `parents` and `confidence` are what make lineage meaningful once the
+     * sound crosses into someone else's project.
+     *
+     * Throws when the take has no genome: an export with invented traits would look identical to a
+     * measured one to whoever receives it.
+     */
+    fun export(
+        entry: SoundArchive.Entry,
+        trackName: String,
+        creatorName: String,
+        exportedAt: Long,
+    ): String {
+        val genome = requireNotNull(entry.genome) {
+            "Take ${entry.takeId} has no genome to export"
+        }
+        return GenomeShareableTrack.toShareableJson(
+            GenomeShareableTrack(
+                genome = genome,
+                trackName = trackName,
+                creatorName = creatorName,
+                exportedAt = exportedAt,
+                tags = entry.tags.toList(),
+                lineageSummary = "Parents: ${genome.parents.size}, Source: ${genome.sourceId}",
+            )
+        )
+    }
+
+    /**
+     * Rebuilds an archive entry from shared Sound DNA so it can be bred against local takes.
+     *
+     * The entry gets a fresh local id, but the genome is restored untouched — ancestry survives the
+     * project boundary intact. Malformed input throws rather than yielding a blank-but-plausible
+     * sound.
+     */
+    fun `import`(raw: String, newTakeId: String): SoundArchive.Entry {
+        require(raw.isNotBlank()) { "Sound DNA payload is empty" }
+        require(raw.contains(GenomeShareableTrack.MAGIC)) {
+            "Not a Sound DNA payload: missing ${GenomeShareableTrack.MAGIC} header"
+        }
+        val track = try {
+            GenomeShareableTrack.fromShareableJson(raw)
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Sound DNA payload is not readable", e)
+        }
+        return SoundArchive.Entry(
+            takeId = newTakeId,
+            state = SoundArchive.State.LIVING,
+            tags = track.tags.toSet() + IMPORTED_TAG,
+            genome = track.genome,
+            originTakeId = track.genome.sourceId,
+        )
+    }
+
     private fun buildLineage(
         takeId: String,
         all: List<SoundArchive.Entry>
@@ -120,12 +186,39 @@ object GenomeArtifactCodec {
     }
 }
 
-/** Extension: converts SoundGenome to a plain Float map for serialization. */
-private fun SoundGenome.toMap(): Map<String, Float> = buildMap {
-    put("timbre_brightness", timbreBrightness)
-    put("spectral_centroid", spectralCentroid)
-    put("energy", energy)
-    put("bpm_estimate", bpmEstimate.toFloat())
-    put("pitch_mean", pitchMean)
-    // Additional genome fields would be added here as the SoundGenome class expands
+/**
+ * Extension: converts SoundGenome to a plain Float map for serialization.
+ *
+ * These are the measured traits SoundGenome actually carries. Only real measurements are
+ * exported — a trait that was never measured must not be invented here, because an importer
+ * cannot tell a guessed value from a measured one once it is in the artifact.
+ */
+/**
+ * Reverse of [toMap]. Returns null when the artifact carries no measured traits, so an entry
+ * imported without a genome is honestly genome-less rather than silently defaulted to zeros.
+ */
+private fun Map<String, Float>.toGenomeOrNull(sourceId: String, parents: List<String>): SoundGenome? {
+    val transient = this["transient"] ?: return null
+    val harmonicity = this["harmonicity"] ?: return null
+    val brightness = this["brightness"] ?: return null
+    val dynamics = this["dynamics"] ?: return null
+    return SoundGenome(
+        sourceId = sourceId,
+        transient = transient.toDouble(),
+        harmonicity = harmonicity.toDouble(),
+        brightness = brightness.toDouble(),
+        dynamics = dynamics.toDouble(),
+        stereoWidth = (this["stereo_width"] ?: 0.0f).toDouble(),
+        confidence = (this["confidence"] ?: 1.0f).toDouble(),
+        parents = parents,
+    )
 }
+
+private fun SoundGenome.toMap(): Map<String, Float> = mapOf(
+    "transient" to transient.toFloat(),
+    "harmonicity" to harmonicity.toFloat(),
+    "brightness" to brightness.toFloat(),
+    "dynamics" to dynamics.toFloat(),
+    "stereo_width" to stereoWidth.toFloat(),
+    "confidence" to confidence.toFloat(),
+)

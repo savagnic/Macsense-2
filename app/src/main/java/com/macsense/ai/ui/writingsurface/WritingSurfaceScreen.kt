@@ -36,6 +36,7 @@ fun WritingSurfaceScreen(
     val isDiffVisible by viewModel.isDiffVisible.collectAsState()
     val diffOriginal by viewModel.diffOriginal.collectAsState()
     val diffSuggested by viewModel.diffSuggested.collectAsState()
+    val diffIsLocalAutomation by viewModel.diffIsLocalAutomation.collectAsState()
     val isGenerating by viewModel.isGenerating.collectAsState()
     val savedRequests by viewModel.savedRequests.collectAsState()
     val chatLog by viewModel.chatLog.collectAsState()
@@ -322,6 +323,7 @@ fun WritingSurfaceScreen(
                 LyricDiffEditor(
                     originalText = diffOriginal?.text.orEmpty(),
                     suggestedText = diffSuggested,
+                    isLocalAutomation = diffIsLocalAutomation,
                     onAccept = { viewModel.acceptDiff() },
                     onReject = { viewModel.rejectDiff() },
                     modifier = Modifier

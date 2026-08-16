@@ -1,11 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!--
+   MA¢SENSE is local-first (API 31+ backup/transfer policy).
+
+   A user's recordings, takes, projects, and Sound Genome data are private creative work.
+   They are never copied off the device by an automatic process — not to cloud backup and
+   not to a new phone during device-to-device transfer. Moving that data is an explicit,
+   user-initiated export only.
+
+   Both sections must exclude every domain: android:allowBackup="false" disables cloud
+   backup, but device-to-device transfer is governed independently by <device-transfer>,
+   so omitting it here would still hand the whole app-private directory to a new device.
+-->
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="file" path="."/>
-        <exclude domain="file" path="device_specific/"/>
+        <exclude domain="database" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="root" path="." />
     </cloud-backup>
     <device-transfer>
-        <include domain="file" path="."/>
-        <exclude domain="file" path="device_specific/"/>
+        <exclude domain="database" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="root" path="." />
     </device-transfer>
 </data-extraction-rules>
