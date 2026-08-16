@@ -55,6 +55,12 @@ object Migrations {
         }
     }
 
+    /**
+     * Adds the `clips` table: the first concrete piece of Phase 2's "extend Room to a full
+     * track/clip/region schema" item in PRODUCTION_HARDENING_PLAN.md. See [ClipEntity] kdoc for
+     * the schema rationale (lane-as-track, take-id reference instead of duplicated audio,
+     * per-clip trim/gain/mute, CASCADE delete tied to the owning section).
+     */
     val MIGRATION_3_4 = object : Migration(3, 4) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(

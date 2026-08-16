@@ -147,6 +147,30 @@ class DawViewModelTest {
     }
 
     @Test
+    fun offlineAriResponse_doesNotDoubleLabel() = kotlinx.coroutines.test.runTest(dispatcher) {
+        // Without a configured GEMINI_API_KEY the offline branch runs. The response text must
+        // carry exactly ONE "[Local automation" prefix — the one prepended by the caller — not
+        // an additional one baked into the reply body by generateOfflineAriResponse().
+        val vm = DawViewModel()
+        vm.sendMessageToAri("change the bpm")
+
+        var attempts = 0
+        while (vm.ariChatLog.value.size < 3 && attempts < 100) {
+            kotlinx.coroutines.delay(20)
+            attempts++
+        }
+
+        val assistantMsg = vm.ariChatLog.value.lastOrNull { it.role == "assistant" }
+        val text = assistantMsg?.text ?: ""
+        // The text starts with the prefix exactly once.
+        assertTrue("Offline response must carry the local-automation label", text.contains("[Local automation"))
+        // It must NOT contain the label twice (double-prefix regression).
+        val firstIndex = text.indexOf("[Local automation")
+        val secondIndex = text.indexOf("[Local automation", firstIndex + 1)
+        assertEquals("Response must not contain the local-automation label twice", -1, secondIndex)
+    }
+
+    @Test
     fun testApplyAriCommandBpm() {
         val vm = DawViewModel()
         val cmd = com.macsense.ai.api.AriCommand(
