@@ -6,6 +6,7 @@ const VOCAL_PRESETS={
 
 export function mountMacsenseExperience({getProject,onProjectChange,onResurrect,onApplyVocalPreset}={}){
   if(!document.querySelector('link[data-macsense-experience]')){const link=document.createElement('link');link.rel='stylesheet';link.href='./experience.css';link.dataset.macsenseExperience='1';document.head.append(link)}
+  globalThis.macsenseStudio={getProject:()=>getProject?.(),setProject:next=>onProjectChange?.(next),resurrect:(g,tags)=>onResurrect?.(g,tags),applyVocalPreset:p=>onApplyVocalPreset?.(p)};
   if(!document.querySelector('#feature-dock')) document.body.insertAdjacentHTML('beforeend',`
     <nav id="feature-dock" class="feature-dock" aria-label="Advanced studio tools">
       <button data-feature="arrangement">Arrangement</button><button data-feature="vocal">Vocal Scanner</button><button data-feature="resurrection">Resurrection</button><button data-feature="story">System</button>
