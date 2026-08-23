@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Macsense — capture the moment, make it useful." />
+    <title>Macsense Web</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div><span class="eyebrow">MACSENSE</span><h1>Make the moment useful.</h1></div>
+        <span class="status" id="status" role="status">Ready</span>
+      </header>
+
+      <section class="card recorder" aria-labelledby="record-title">
+        <div class="card-heading"><div><span class="eyebrow">CAPTURE</span><h2 id="record-title">Record a thought</h2></div><span class="timer" id="timer">00:00</span></div>
+        <p class="muted">Your recording stays in this browser until you choose to download it.</p>
+        <div class="controls"><button class="primary" id="record">Start recording</button><button id="stop" disabled>Stop</button></div>
+        <audio id="player" controls hidden></audio>
+        <a class="download" id="download" hidden>Download recording</a>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <span class="eyebrow">PROCESS</span><h2>Ask Ari</h2>
+          <p class="muted">Send a note to the Macsense gateway. Set the gateway URL and token in the fields below.</p>
+          <label>Gateway URL<input id="gateway" type="url" placeholder="https://your-gateway.example.com" /></label>
+          <label>Client token<input id="token" type="password" placeholder="Optional client token" autocomplete="off" /></label>
+          <label>Prompt<textarea id="prompt" rows="4" placeholder="What should Ari help me understand?"></textarea></label>
+          <button class="primary" id="ask">Ask Ari</button>
+          <pre class="result" id="result" aria-live="polite">No response yet.</pre>
+        </article>
+        <article class="card guidance"><span class="eyebrow">NEXT</span><h2>Small loop, real signal</h2><p>Capture, ask, listen back, and export. Cloud projects and sign-in will follow once this browser loop is validated with real users.</p><ul><li>Use HTTPS for microphone access.</li><li>Keep gateway tokens private.</li><li>Download your recording before closing this tab.</li></ul></article>
+      </section>
+    </main>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
