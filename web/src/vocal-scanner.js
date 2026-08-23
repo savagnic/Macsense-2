@@ -1,4 +1,5 @@
 import './lyrics-tools.js';
+import './sound-dna.js';
 
 const PRESETS = {
   MATCH_CLOSELY: {
