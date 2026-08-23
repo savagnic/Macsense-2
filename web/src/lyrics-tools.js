@@ -7,6 +7,7 @@ const ACTIONS=[
 ];
 
 function install(){
+  if(!document.querySelector('link[data-lyric-tools]')){const link=document.createElement('link');link.rel='stylesheet';link.href='./lyrics-tools.css';link.dataset.lyricTools='1';document.head.append(link)}
   const textarea=document.querySelector('#lyrics');if(!textarea||document.querySelector('#lyric-ai-tools'))return;
   const bar=document.createElement('div');bar.id='lyric-ai-tools';bar.className='lyric-ai-tools';
   bar.innerHTML=`<span>HIGHLIGHT → ARI</span>${ACTIONS.map(([label,intent],i)=>`<button type="button" data-lyric-action="${i}" data-intent="${escapeAttr(intent)}">${label}</button>`).join('')}`;
