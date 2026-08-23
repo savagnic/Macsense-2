@@ -147,16 +147,16 @@ class DawViewModelTest {
     }
 
     @Test
-    fun offlineAriResponse_doesNotDoubleLabel() = kotlinx.coroutines.test.runTest(dispatcher) {
-        // Without a configured GEMINI_API_KEY the offline branch runs. The response text must
-        // carry exactly ONE "[Local automation" prefix — the one prepended by the caller — not
-        // an additional one baked into the reply body by generateOfflineAriResponse().
+    fun offlineAriResponse_doesNotDoubleLabel() {
+        // Without a configured GEMINI_API_KEY the offline branch runs on Dispatchers.IO after
+        // a real typing delay. Wait on wall-clock time here instead of advancing the test
+        // dispatcher so this regression test observes the same async path production uses.
         val vm = DawViewModel()
         vm.sendMessageToAri("change the bpm")
 
         var attempts = 0
-        while (vm.ariChatLog.value.size < 3 && attempts < 100) {
-            kotlinx.coroutines.delay(20)
+        while (vm.ariChatLog.value.size < 3 && attempts < 150) {
+            Thread.sleep(20)
             attempts++
         }
 

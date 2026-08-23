@@ -1,0 +1,81 @@
+name: Web Studio CI
+
+on:
+  push:
+    branches: [main, 'web-parity/**']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  web-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run browser-domain tests
+        working-directory: web
+        run: npm test
+      - name: Validate production shell
+        run: |
+          test -f web/index.html
+          test -f web/manifest.webmanifest
+          test -f web/sw.js
+          grep -q 'WebAudioEngine' web/src/audio-engine.js
+          grep -q 'FlowRecorder' web/src/recorder.js
+          grep -q 'AriGatewayClient' web/src/ari.js
+          grep -q 'SoundGenome' web/test/domain.test.js
+          grep -q 'mountMacsenseExperience' web/src/app.js
+          grep -q 'normalizeToTarget' web/src/app.js
+          if grep -RInE 'GEMINI_API_KEY|service_role|SUPABASE_SERVICE_ROLE' web --exclude='*.md'; then
+            echo 'Server-only secret reference found in web client'
+            exit 1
+          fi
+      - name: Start static studio
+        working-directory: web
+        run: |
+          python3 -m http.server 4173 >/tmp/macsense-web.log 2>&1 &
+          echo $! >/tmp/macsense-web.pid
+          sleep 1
+          curl --fail --silent http://127.0.0.1:4173/ | grep -q 'MACSENSE AI'
+          curl --fail --silent http://127.0.0.1:4173/src/app.js | grep -q 'WebAudioEngine'
+      - name: Stop static studio
+        if: always()
+        run: kill $(cat /tmp/macsense-web.pid) 2>/dev/null || true
+
+  gateway-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build gateway TypeScript
+        working-directory: server
+        run: |
+          npm install
+          npm run build
+      - name: Build combined production image
+        run: docker build -t macsense-studio:ci .
+      - name: Boot combined studio container
+        run: |
+          docker run -d --rm --name macsense-ci -p 8080:8080 \
+            -e GEMINI_API_KEY=ci-placeholder-not-a-real-key \
+            macsense-studio:ci
+          for i in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8080/readyz >/tmp/ready.json; then break; fi
+            sleep 1
+          done
+          cat /tmp/ready.json
+          grep -q '"status":"ready"' /tmp/ready.json
+          curl --fail --silent http://127.0.0.1:8080/ | grep -q 'MACSENSE AI'
+          curl --fail --silent http://127.0.0.1:8080/src/app.js | grep -q 'mountMacsenseExperience'
+      - name: Stop combined studio container
+        if: always()
+        run: docker stop macsense-ci 2>/dev/null || true
