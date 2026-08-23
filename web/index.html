@@ -10,10 +10,23 @@
   <title>MACSENSE AI — Studio</title>
 </head>
 <body>
+  <section id="cinematic-intro" class="cinematic" aria-modal="true" role="dialog" aria-labelledby="cinematic-title" hidden>
+    <div class="cinematic-stage">
+      <div class="cinematic-orb"><i></i><b></b></div>
+      <div class="cinematic-copy">
+        <span class="eyebrow">ARI AWAKENING · FIRST LAUNCH</span>
+        <h1 id="cinematic-title">This is not a loop pack. This is a living studio.</h1>
+        <p id="cinematic-caption">Drop a voice, breed a sound, command the mix, and let Ari propose the dangerous version before you decide what survives.</p>
+        <div class="cinematic-actions"><button id="enter-studio">Enter Studio</button><button id="replay-cinematic" class="ghost">Replay Pulse</button></div>
+      </div>
+      <canvas id="cinematic-canvas" width="900" height="520" aria-hidden="true"></canvas>
+    </div>
+  </section>
+
   <header class="topbar">
     <div class="brand"><div class="sigil">M</div><div><strong>MACSENSE <span>AI</span></strong><small>CYBER-ORGANIC MUSIC SYSTEM</small></div></div>
     <div class="project-strip"><input id="project-name" aria-label="Project name"><label>BPM <input id="bpm" type="number" min="40" max="240"></label></div>
-    <div class="top-actions"><button id="install-app" class="ghost" hidden>Install App</button><button id="save" class="ghost">Save</button><button id="export-mix">Export Master</button></div>
+    <div class="top-actions"><button id="show-cinematic" class="ghost">Ari Intro</button><button id="install-app" class="ghost" hidden>Install App</button><button id="save" class="ghost">Save</button><button id="export-mix">Export Master</button></div>
   </header>
 
   <main class="studio-grid">
@@ -65,6 +78,7 @@
   </main>
 
   <footer><span id="status" data-tone="ok">Local studio ready</span><span>Projects + audio persist on this device. Cloud sync activates only after authenticated production configuration.</span></footer>
+  <script type="module" src="./src/cinematic.js"></script>
   <script type="module" src="./src/app.js"></script>
 </body>
 </html>
