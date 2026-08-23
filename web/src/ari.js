@@ -13,7 +13,7 @@ export function parseAriCommands(text) {
     try {
       const command = JSON.parse(match[1]);
       if (command && typeof command.type === 'string') commands.push(command);
-    } catch { /* malformed legacy command remains visible and is never executed */ }
+    } catch { }
   }
   return commands;
 }
@@ -24,7 +24,8 @@ export function stripAriCommands(text) {
 
 export class AriGatewayClient {
   constructor({ baseUrl = '', getAccessToken = async () => null, timeoutMs = 30000 } = {}) {
-    this.baseUrl = String(baseUrl).replace(/\/$/, '');
+    const sameOrigin = typeof location !== 'undefined' ? location.origin : '';
+    this.baseUrl = String(baseUrl || sameOrigin).replace(/\/$/, '');
     this.getAccessToken = getAccessToken;
     this.timeoutMs = timeoutMs;
   }
