@@ -1,3 +1,5 @@
+import './lyrics-tools.js';
+
 const PRESETS = {
   MATCH_CLOSELY: {
     label: 'Match Closely', autoTuneSpeedMs: 3, eqLowDb: -4, eqMidDb: 0.5, eqHighDb: 6,
