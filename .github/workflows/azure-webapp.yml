@@ -1,0 +1,157 @@
+name: Azure Web App Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'server/**'
+      - 'web/**'
+      - '.github/workflows/azure-webapp.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  ZIP_PATH: macsense-azure-package.zip
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Validate Azure deployment inputs
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          missing=0
+          for name in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_WEBAPP_NAME AZURE_RESOURCE_GROUP GEMINI_API_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required GitHub secret/variable: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Azure deploy cannot continue until required repo secrets/variables exist."
+            exit 1
+          fi
+
+      - name: Build gateway
+        working-directory: server
+        run: |
+          npm install
+          npm run build
+          npm prune --omit=dev
+
+      - name: Validate web studio package
+        run: |
+          npm --prefix web test
+          test -f web/index.html
+          test -f web/manifest.webmanifest
+          test -f web/sw.js
+          grep -q 'MACSENSE AI' web/index.html
+          grep -q 'mountMacsenseExperience' web/src/app.js
+          if grep -RInE 'GEMINI_API_KEY|service_role|SUPABASE_SERVICE_ROLE' web --exclude='*.md'; then
+            echo 'Server-only secret reference found in web client'
+            exit 1
+          fi
+
+      - name: Package App Service artifact
+        run: |
+          rm -rf .azure-package "$ZIP_PATH"
+          mkdir -p .azure-package/server .azure-package/web
+          cp server/package.json .azure-package/server/package.json
+          cp -R server/node_modules .azure-package/server/node_modules
+          cp -R server/dist .azure-package/server/dist
+          cp -R web/. .azure-package/web/
+          cat > .azure-package/startup.sh <<'EOF'
+          #!/usr/bin/env sh
+          set -eu
+          cd /home/site/wwwroot/server
+          exec node dist/index.js
+          EOF
+          chmod +x .azure-package/startup.sh
+          (cd .azure-package && zip -qr "../$ZIP_PATH" .)
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Configure Azure Web App runtime
+        env:
+          AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MACSENSE_CLIENT_TOKEN: ${{ secrets.MACSENSE_CLIENT_TOKEN }}
+          CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+        run: |
+          az webapp config set \
+            --name "$AZURE_WEBAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --linux-fx-version "NODE|22-lts" \
+            --startup-file "/home/site/wwwroot/startup.sh"
+          az webapp config appsettings set \
+            --name "$AZURE_WEBAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --settings \
+              NODE_ENV=production \
+              PORT=8080 \
+              MACSENSE_WEB_ROOT=/home/site/wwwroot/web \
+              GEMINI_API_KEY="$GEMINI_API_KEY" \
+              MACSENSE_CLIENT_TOKEN="$MACSENSE_CLIENT_TOKEN" \
+              CORS_ORIGINS="$CORS_ORIGINS" \
+              RATE_LIMIT_MAX=60 \
+              RATE_LIMIT_WINDOW_MS=60000
+
+      - name: Deploy package to Azure Web App
+        env:
+          AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+        run: |
+          az webapp deploy \
+            --name "$AZURE_WEBAPP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --src-path "$ZIP_PATH" \
+            --type zip \
+            --restart true
+
+      - name: Live smoke test
+        env:
+          AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+        run: |
+          base="https://${AZURE_WEBAPP_NAME}.azurewebsites.net"
+          echo "Testing $base"
+          for i in $(seq 1 60); do
+            if curl --fail --silent "$base/readyz" | tee /tmp/ready.json | grep -q '"status":"ready"'; then
+              break
+            fi
+            sleep 5
+          done
+          cat /tmp/ready.json
+          curl --fail --silent "$base/health" | grep -q 'macsense-studio'
+          curl --fail --silent "$base/" | grep -q 'MACSENSE AI'
+          curl --fail --silent "$base/src/app.js" | grep -q 'mountMacsenseExperience'
+          echo "MACSENSE_LIVE_URL=$base" >> "$GITHUB_ENV"
+
+      - name: Deployment summary
+        run: |
+          echo "## MACSENSE Azure deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "Live URL: $MACSENSE_LIVE_URL" >> "$GITHUB_STEP_SUMMARY"
