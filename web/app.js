@@ -1,35 +1,4 @@
-const $ = (id) => document.getElementById(id);
-let recorder; let chunks = []; let startedAt; let timerId; let recordingUrl;
-const setStatus = (text) => { $('status').textContent = text; };
-const formatTime = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2,'0')}:${String(seconds % 60).padStart(2,'0')}`;
-
-$('record').addEventListener('click', async () => {
-  try {
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw new Error('This browser does not support microphone recording.');
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    chunks = []; recorder = new MediaRecorder(stream); startedAt = Date.now();
-    recorder.addEventListener('dataavailable', (event) => { if (event.data.size) chunks.push(event.data); });
-    recorder.addEventListener('stop', () => {
-      stream.getTracks().forEach((track) => track.stop());
-      const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-      if (recordingUrl) URL.revokeObjectURL(recordingUrl); recordingUrl = URL.createObjectURL(blob);
-      $('player').src = recordingUrl; $('player').hidden = false; $('download').href = recordingUrl; $('download').download = `macsense-${new Date().toISOString().replaceAll(':','-')}.webm`; $('download').hidden = false;
-      setStatus('Recording ready'); clearInterval(timerId);
-    });
-    recorder.start(); $('record').disabled = true; $('stop').disabled = false; setStatus('Recording…');
-    timerId = setInterval(() => { $('timer').textContent = formatTime(Math.floor((Date.now() - startedAt) / 1000)); }, 250);
-  } catch (error) { setStatus(error.message); }
-});
-$('stop').addEventListener('click', () => { if (recorder?.state === 'recording') recorder.stop(); $('record').disabled = false; $('stop').disabled = true; });
-$('ask').addEventListener('click', async () => {
-  const gateway = $('gateway').value.trim().replace(/\/$/, ''); const token = $('token').value.trim(); const prompt = $('prompt').value.trim();
-  if (!gateway || !prompt) { $('result').textContent = 'Enter a gateway URL and prompt first.'; return; }
-  $('ask').disabled = true; $('result').textContent = 'Ari is thinking…';
-  try {
-    const headers = { 'Content-Type': 'application/json' }; if (token) headers.Authorization = `Bearer ${token}`;
-    const response = await fetch(`${gateway}/v1/ari/chat`, { method: 'POST', headers, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }) });
-    const body = await response.json(); if (!response.ok) throw new Error(body.error || `Gateway returned ${response.status}`);
-    const text = body?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || JSON.stringify(body, null, 2); $('result').textContent = text; setStatus('Ari response received');
-  } catch (error) { $('result').textContent = `Could not reach Ari: ${error.message}`; setStatus('Ari unavailable'); }
-  finally { $('ask').disabled = false; }
-});
+const $=id=>document.getElementById(id);let recorder,chunks=[],recordingUrl,startedAt,timerId;const setStatus=t=>$('status').textContent=`● ${t}`;const fmt=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+$('recordBtn').onclick=async()=>{if(recorder?.state==='recording'){recorder.stop();return}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];recorder=new MediaRecorder(stream);startedAt=Date.now();recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);recorder.onstop=()=>{stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});if(recordingUrl)URL.revokeObjectURL(recordingUrl);recordingUrl=URL.createObjectURL(blob);$('player').src=recordingUrl;$('player').hidden=false;$('captureLabel').textContent='Idea captured';$('recordBtn').textContent='Record another';$('micOrb').style.color='var(--cyan)';clearInterval(timerId);setStatus('Saved locally')};recorder.start();$('recordBtn').textContent='Stop recording';$('captureLabel').textContent='Recording your idea…';setStatus('Recording');timerId=setInterval(()=>{$('timer').textContent=fmt(Math.floor((Date.now()-startedAt)/1000))},250)}catch(e){setStatus(e.message||'Microphone unavailable')}};
+$('play').onclick=()=>{const p=$('player');if(p.hidden){setStatus('Record an idea first');return}p.paused?p.play():p.pause()};$('stop').onclick=()=>{$('player').pause();$('player').currentTime=0};$('addSection').onclick=()=>{const n=document.querySelectorAll('.track').length+1;const el=document.createElement('article');el.className='track';el.innerHTML=`<div class="track-meta"><span class="track-number">0${n}</span><div><h3>New section <span class="tag">8 bars</span></h3><p>Fresh canvas · 01:12</p></div><button class="more">•••</button></div><div class="wave purple">${'<i></i>'.repeat(20)}</div><div class="track-tools"><button>♡</button><button>＋ Add layer</button><span>▰ 0 layers</span></div>`;$('timeline').insertBefore(el,$('addSection'));setStatus('Section added')};
+for(const b of document.querySelectorAll('.inspector-tab'))b.onclick=()=>{document.querySelectorAll('.inspector-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');for(const id of ['ariPanel','stemsPanel','notesPanel'])$(id).classList.add('hidden');$(`${b.dataset.panel}Panel`).classList.remove('hidden')};for(const b of document.querySelectorAll('.mode,.nav-item'))b.onclick=()=>{document.querySelectorAll('.mode,.nav-item').forEach(x=>x.classList.remove('active'));b.classList.add('active');setStatus(`${b.textContent.trim()} workspace`) };$('newProject').onclick=()=>{$('projectTitle').firstChild.textContent='Untitled '+String(Math.floor(Math.random()*90)+10);setStatus('New project created locally')};$('exportBtn').onclick=()=>{if(recordingUrl){const a=document.createElement('a');a.href=recordingUrl;a.download='macsense-idea.webm';a.click();setStatus('Recording exported')}else setStatus('Record something before exporting')};$('askBtn').onclick=async()=>{const prompt=$('prompt').value.trim();if(!prompt){$('result').textContent='Tell Ari what you are working on first.';return}$('askBtn').disabled=true;$('result').textContent='Ari is thinking…';try{const gateway=localStorage.getItem('macsenseGateway');if(!gateway)throw new Error('Gateway not configured yet. Your workspace is ready; connect Ari when the gateway is deployed.');const r=await fetch(`${gateway.replace(/\/$/,'')}/v1/ari/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}]})});const body=await r.json();if(!r.ok)throw new Error(body.error||`Gateway ${r.status}`);$('result').textContent=body?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'Ari returned no text';setStatus('Ari responded')}catch(e){$('result').textContent=e.message}finally{$('askBtn').disabled=false}};

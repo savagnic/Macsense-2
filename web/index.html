@@ -1,40 +1,22 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Macsense — capture the moment, make it useful." />
-    <title>Macsense Web</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <main class="shell">
-      <header class="topbar">
-        <div><span class="eyebrow">MACSENSE</span><h1>Make the moment useful.</h1></div>
-        <span class="status" id="status" role="status">Ready</span>
-      </header>
-
-      <section class="card recorder" aria-labelledby="record-title">
-        <div class="card-heading"><div><span class="eyebrow">CAPTURE</span><h2 id="record-title">Record a thought</h2></div><span class="timer" id="timer">00:00</span></div>
-        <p class="muted">Your recording stays in this browser until you choose to download it.</p>
-        <div class="controls"><button class="primary" id="record">Start recording</button><button id="stop" disabled>Stop</button></div>
-        <audio id="player" controls hidden></audio>
-        <a class="download" id="download" hidden>Download recording</a>
-      </section>
-
-      <section class="grid">
-        <article class="card">
-          <span class="eyebrow">PROCESS</span><h2>Ask Ari</h2>
-          <p class="muted">Send a note to the Macsense gateway. Set the gateway URL and token in the fields below.</p>
-          <label>Gateway URL<input id="gateway" type="url" placeholder="https://your-gateway.example.com" /></label>
-          <label>Client token<input id="token" type="password" placeholder="Optional client token" autocomplete="off" /></label>
-          <label>Prompt<textarea id="prompt" rows="4" placeholder="What should Ari help me understand?"></textarea></label>
-          <button class="primary" id="ask">Ask Ari</button>
-          <pre class="result" id="result" aria-live="polite">No response yet.</pre>
-        </article>
-        <article class="card guidance"><span class="eyebrow">NEXT</span><h2>Small loop, real signal</h2><p>Capture, ask, listen back, and export. Cloud projects and sign-in will follow once this browser loop is validated with real users.</p><ul><li>Use HTTPS for microphone access.</li><li>Keep gateway tokens private.</li><li>Download your recording before closing this tab.</li></ul></article>
-      </section>
-    </main>
-    <script src="./app.js" type="module"></script>
-  </body>
-</html>
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Macsense Studio — turn raw ideas into finished sound."><title>Macsense Studio</title><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="rail"><div class="brand"><span class="brand-mark">✦</span><span>MACSENSE<small>STUDIO</small></span></div><button class="new-project" id="newProject">＋ New project</button><nav><p>WORKSPACE</p><button class="nav-item active" data-view="produce">◈ <span>Produce</span></button><button class="nav-item" data-view="record">◉ <span>Record</span></button><button class="nav-item" data-view="write">✎ <span>Write</span></button><button class="nav-item" data-view="mix">◒ <span>Mix</span></button><button class="nav-item" data-view="master">✧ <span>Master</span></button><p>LIBRARY</p><button class="nav-item">▦ <span>Projects</span></button><button class="nav-item">♫ <span>Sounds</span></button><button class="nav-item">⚙ <span>Settings</span></button></nav><div class="rail-bottom"><div class="avatar">NS</div><div><b>Nic Savag</b><small>Local workspace</small></div></div></aside>
+  <main class="workspace">
+    <header class="topbar"><div><span class="crumb">PROJECT / UNTITLED 01</span><h1 id="projectTitle">Untitled 01 <button class="icon" title="Rename">✎</button></h1></div><div class="top-actions"><span class="save-state" id="status">● Saved locally</span><button class="ghost">Share</button><button class="primary" id="exportBtn">Export</button><button class="circle">•••</button></div></header>
+    <div class="mode-tabs"><button class="mode active">Produce</button><button class="mode">Record</button><button class="mode">Mix</button><button class="mode">Master</button><span class="spacer"></span><span class="bpm">♩ <b id="bpm">92</b> BPM</span><button class="ghost">⌘ S</button></div>
+    <section class="content">
+      <div class="main-column">
+        <div class="section-head"><div><span class="kicker">VERTICAL TIMELINE</span><h2>Build the feeling</h2></div><div class="transport"><button class="transport-btn" id="play">▶</button><button class="transport-btn" id="stop">■</button><span id="timecode">00:00:00</span></div></div>
+        <div class="timeline" id="timeline"><article class="track current"><div class="track-meta"><span class="track-number">01</span><div><h3>Intro <span class="tag">8 bars</span></h3><p>Atmosphere · 00:00</p></div><button class="more">•••</button></div><div class="wave purple"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="track-tools"><button>♡</button><button>＋ Add layer</button><span>▰  3 layers</span></div></article><article class="track"><div class="track-meta"><span class="track-number">02</span><div><h3>Verse 1 <span class="tag">16 bars</span></h3><p>Lead idea · 00:18</p></div><button class="more">•••</button></div><div class="wave cyan"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="track-tools"><button>♡</button><button>＋ Add layer</button><span>▰  5 layers</span></div></article><article class="track"><div class="track-meta"><span class="track-number">03</span><div><h3>Hook <span class="tag">8 bars</span></h3><p>Energy lift · 00:54</p></div><button class="more">•••</button></div><div class="wave orange"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="track-tools"><button>♡</button><button>＋ Add layer</button><span>▰  2 layers</span></div></article><button class="add-section" id="addSection">＋ Add section</button></div>
+        <div class="capture-dock"><div class="mic-orb" id="micOrb">●</div><div><b id="captureLabel">Capture a new idea</b><small>Record from your microphone and keep it in this project</small></div><button class="primary" id="recordBtn">Start recording</button><span class="timer" id="timer">00:00</span><audio id="player" controls hidden></audio></div>
+      </div>
+      <aside class="inspector"><div class="inspector-tabs"><button class="inspector-tab active" data-panel="ari">ARI</button><button class="inspector-tab" data-panel="stems">STEMS</button><button class="inspector-tab" data-panel="notes">NOTES</button></div><div id="ariPanel"><div class="ari-intro"><span class="ari-spark">✦</span><div><h2>Meet Ari</h2><p>Your creative studio partner</p></div></div><div class="suggestion"><span>✦</span><div><b>Try a lift</b><p>The hook could use more contrast. Want a brighter synth layer?</p><button class="suggestion-btn">Apply idea →</button></div></div><label class="field-label">ASK ARI<textarea id="prompt" placeholder="Ask about your arrangement, lyrics, or next move…"></textarea></label><button class="ask-btn" id="askBtn">Ask Ari <span>↗</span></button><div class="ari-result" id="result">Ari is ready when you are.</div><p class="privacy">Your audio stays on this device. Ari uses the configured gateway only when you send a prompt.</p></div><div id="stemsPanel" class="hidden"><span class="kicker">STEM MIXER</span><h2>Shape the balance</h2><div class="stem"><b>VOCALS</b><span class="meter"><i></i></span><input type="range" value="82"></div><div class="stem"><b>DRUMS</b><span class="meter yellow"><i></i></span><input type="range" value="68"></div><div class="stem"><b>BASS</b><span class="meter red"><i></i></span><input type="range" value="74"></div><div class="stem"><b>SYNTHS</b><span class="meter green"><i></i></span><input type="range" value="58"></div><div class="locked"><span>✦</span><b>AI stem separation</b><small>Connect a processing service to unlock</small></div></div><div id="notesPanel" class="hidden"><span class="kicker">SESSION NOTES</span><h2>Keep the thread</h2><textarea class="notes" placeholder="Write a note about this session…"></textarea><p class="muted">Notes are saved in this browser.</p></div></aside>
+    </section>
+  </main>
+</div><script src="app.js"></script>
+</body></html>
