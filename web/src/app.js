@@ -4,6 +4,8 @@ import { AriGatewayClient, executeAriCommand } from './ari.js';
 import { saveProject, saveAudioBlob, loadAudioBlob } from './persistence.js';
 import { FlowRecorder } from './recorder.js';
 import { audioBufferToWav, downloadBlob } from './wav.js';
+import { normalizeToTarget } from './dsp.js';
+import { mountMacsenseExperience } from './experience.js';
 
 const engine = new WebAudioEngine();
 const recorder = new FlowRecorder();
@@ -138,6 +140,14 @@ function breed(parentA, parentB, traits = ['brightness','dynamics']) {
   scheduleSave(); renderGenomes(); renderLineage(); return child;
 }
 
+function resurrect(genome) {
+  const child = makeGenome({ ...genome, sourceId: `${genome.sourceId}↻${Date.now().toString(36)}`, parents: [genome.sourceId], confidence: genome.confidence });
+  project.genomes.push(child);
+  project.lineage.push({ child: child.sourceId, parents: [genome.sourceId], traits: ['resurrection'], createdAt: new Date().toISOString() });
+  scheduleSave(); renderGenomes(); renderLineage(); status(`Resurrected ${genome.sourceId}`);
+  return child;
+}
+
 async function restoreAudio() {
   for (const t of project.tracks) {
     if (engine.tracks.has(t.id)) continue;
@@ -234,8 +244,16 @@ els.ariPending.addEventListener('click', e => {
 });
 
 els.exportMix.addEventListener('click', async () => {
-  try { status('Rendering 48 kHz master…'); const mix = await engine.renderMix({ sampleRate: 48000 }); const wav = audioBufferToWav(mix); downloadBlob(wav, `${safeName(project.name)}-master-48k.wav`); status('Master exported'); }
-  catch (e) { status(e.message, 'bad'); }
+  try {
+    status('Rendering and measuring 48 kHz master…');
+    const mix = await engine.renderMix({ sampleRate: 48000 });
+    const mastered = normalizeToTarget(mix, { targetLufs: project.mastering.targetLufs, ceilingDbtp: project.mastering.ceilingDb });
+    const wav = audioBufferToWav(mastered.buffer);
+    downloadBlob(wav, `${safeName(project.name)}-master-48k.wav`);
+    const before = Number.isFinite(mastered.before.integratedLufs) ? mastered.before.integratedLufs.toFixed(1) : '−∞';
+    const after = Number.isFinite(mastered.after.integratedLufs) ? mastered.after.integratedLufs.toFixed(1) : '−∞';
+    status(`Master exported · ${before} → ${after} LUFS · ${mastered.after.truePeakDbtp.toFixed(1)} dBTP`);
+  } catch (e) { status(e.message, 'bad'); }
 });
 els.save.addEventListener('click', async () => { try { project = await saveProject(project); status('Project saved locally'); } catch (e) { status(e.message, 'bad'); } });
 els.gateway.addEventListener('change', () => localStorage.setItem('macsense_gateway_url', els.gateway.value.trim()));
@@ -249,6 +267,12 @@ els.install.addEventListener('click', async () => { if (installPrompt) { install
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);
 els.gateway.value = localStorage.getItem('macsense_gateway_url') || '';
 syncControls(); restoreAudio(); appendChat('ari', 'Studio is live. Add a take, write, breed, master, or ask me for a bounded change. I will show executable changes before anything mutates.');
+mountMacsenseExperience({
+  getProject: () => project,
+  onProjectChange: next => { project = next; scheduleSave(); syncControls(); },
+  onResurrect: resurrect,
+  onApplyVocalPreset: preset => { project.vocalPreset = preset; scheduleSave(); appendChat('system', `Vocal chain applied: ${preset.mode}`); }
+});
 
 function formatTime(seconds) { const s = Math.max(0, Number(seconds) || 0); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`; }
 function safeName(s) { return String(s || 'macsense').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '') || 'macsense'; }
