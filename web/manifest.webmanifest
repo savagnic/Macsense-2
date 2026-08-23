@@ -1,0 +1,11 @@
+{
+  "name": "MACSENSE AI Studio",
+  "short_name": "MACSENSE",
+  "description": "Browser-native music studio with Ari co-production, Flow Capture, mastering and sound genetics.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#08080c",
+  "theme_color": "#08080c",
+  "orientation": "any",
+  "categories": ["music", "productivity", "entertainment"]
+}
