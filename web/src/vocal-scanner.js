@@ -68,4 +68,4 @@ function installVocalScanner() {
 
 function signed(n) { return `${n >= 0 ? '+' : ''}${Number(n).toFixed(1)} dB`; }
 
-installVocalScanner();
+if (typeof document !== 'undefined') installVocalScanner();
