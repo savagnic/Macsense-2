@@ -25,10 +25,7 @@ const els = {
   exportMix: $('#export-mix'), save: $('#save'), status: $('#status'), gateway: $('#gateway-url'), install: $('#install-app')
 };
 
-function status(message, tone = 'ok') {
-  els.status.textContent = message;
-  els.status.dataset.tone = tone;
-}
+function status(message, tone = 'ok') { els.status.textContent = message; els.status.dataset.tone = tone; }
 
 function scheduleSave() {
   touchProject(project);
@@ -53,10 +50,7 @@ function syncControls() {
 
 function renderTracks() {
   els.tracks.innerHTML = '';
-  if (!project.tracks.length) {
-    els.tracks.innerHTML = '<div class="empty">Drop audio here or use <b>Add Audio</b>. WAV, MP3, AAC, WebM and browser-decodable formats work.</div>';
-    return;
-  }
+  if (!project.tracks.length) { els.tracks.innerHTML = '<div class="empty">Drop audio here or use <b>Add Audio</b>. WAV, MP3, AAC, WebM and browser-decodable formats work.</div>'; return; }
   for (const t of project.tracks) {
     const row = document.createElement('article'); row.className = 'track';
     row.innerHTML = `<div class="track-head"><div><strong>${escapeHtml(t.name)}</strong><small>${formatTime(t.duration || 0)}</small></div><button data-remove="${t.id}" class="icon danger" title="Remove">×</button></div>
@@ -108,15 +102,16 @@ async function addAudioFile(file, source = 'import') {
   const metrics = analyzeBuffer(buffer);
   const genome = makeGenome({ sourceId: id, ...metrics });
   const track = await engine.addTrack({ id, name: file.name || `Flow take ${project.tracks.length + 1}`, buffer });
-  const item = { ...engine.snapshotTrack(track), genome, source, audioBlobId: id };
+  const item = { ...engine.snapshotTrack(track), genome, source, audioBlobId: id, effects: { reverb: 0, delay: 0, filter: 0 } };
   project.tracks.push(item); project.genomes.push(genome);
   await saveAudioBlob(id, file, { name: item.name, type: file.type, source });
   scheduleSave(); syncControls(); status(`Loaded ${item.name}`);
 }
 
 function applyTrackState(id, patch) {
-  engine.setTrackState(id, patch);
-  const t = project.tracks.find(x => x.id === id); if (t) Object.assign(t, patch);
+  const clean = Object.fromEntries(Object.entries(patch).filter(([,v]) => v !== undefined));
+  engine.setTrackState(id, clean);
+  const t = project.tracks.find(x => x.id === id); if (t) Object.assign(t, clean);
   scheduleSave(); renderTracks();
 }
 
@@ -131,21 +126,47 @@ function setMasterPreset(preset) {
   project.mastering = { ...project.mastering, ...presets[preset] }; scheduleSave(); syncControls();
 }
 
-function breed(parentA, parentB, traits = ['brightness','dynamics']) {
+function breed(parentA, parentB, traits = ['brightness','dynamics'], traitBias, tags) {
   const a = project.genomes.find(g => g.sourceId === parentA), b = project.genomes.find(g => g.sourceId === parentB);
   if (!a || !b) throw new Error('Choose two valid parent genomes');
-  const child = breedGenomes(a, b, traits);
+  const chosen = traits?.length ? traits : (Number(traitBias) >= .5 ? ['transient','harmonicity','brightness','dynamics','stereoWidth'] : ['brightness','dynamics']);
+  const child = breedGenomes(a, b, chosen);
+  if (tags?.length) child.tags = [...tags];
   project.genomes.push(child);
-  project.lineage.push({ child: child.sourceId, parents: child.parents, traits, createdAt: new Date().toISOString() });
+  project.lineage.push({ child: child.sourceId, parents: child.parents, traits: chosen, createdAt: new Date().toISOString() });
   scheduleSave(); renderGenomes(); renderLineage(); return child;
 }
 
-function resurrect(genome) {
+function resurrect(genome, tags = []) {
+  if (!genome) throw new Error('Resurrection target was not found');
   const child = makeGenome({ ...genome, sourceId: `${genome.sourceId}↻${Date.now().toString(36)}`, parents: [genome.sourceId], confidence: genome.confidence });
+  if (tags?.length) child.tags = [...tags];
   project.genomes.push(child);
   project.lineage.push({ child: child.sourceId, parents: [genome.sourceId], traits: ['resurrection'], createdAt: new Date().toISOString() });
-  scheduleSave(); renderGenomes(); renderLineage(); status(`Resurrected ${genome.sourceId}`);
-  return child;
+  scheduleSave(); renderGenomes(); renderLineage(); status(`Resurrected ${genome.sourceId}`); return child;
+}
+
+function resurrectById(id, tags) { return resurrect(project.genomes.find(g => g.sourceId === id), tags); }
+
+function reorderSections(order) {
+  if (!Array.isArray(order) || !order.length) throw new Error('Ari supplied an empty section order');
+  const byId = new Map(project.sections.map(s => [s.id, s]));
+  const reordered = order.map(id => byId.get(id)).filter(Boolean);
+  for (const section of project.sections) if (!reordered.includes(section)) reordered.push(section);
+  if (!reordered.length) throw new Error('Ari section order did not match this project');
+  project.sections = reordered; scheduleSave(); syncControls(); return reordered;
+}
+
+function updateEffects(targetId, patch) {
+  const track = project.tracks.find(t => t.id === targetId);
+  if (track) {
+    track.effects = { ...(track.effects || {}), ...Object.fromEntries(Object.entries(patch).filter(([,v]) => v !== undefined)) };
+    if (patch.volume !== undefined) applyTrackState(track.id, { volume: patch.volume });
+    scheduleSave(); return track.effects;
+  }
+  project.sectionEffects ||= {};
+  project.sectionEffects[targetId || 'global'] = { ...(project.sectionEffects[targetId || 'global'] || {}), ...Object.fromEntries(Object.entries(patch).filter(([,v]) => v !== undefined)) };
+  scheduleSave(); return project.sectionEffects[targetId || 'global'];
 }
 
 async function restoreAudio() {
@@ -234,8 +255,11 @@ els.ariPending.addEventListener('click', e => {
         setTempo: bpm => { project.bpm = Math.max(40, Math.min(240, bpm)); },
         setTrackState: applyTrackState,
         rewriteLyrics: updated => { project.lyrics = updated; },
+        reorderSections,
         setMasterPreset,
-        breedSounds: breed
+        updateEffects,
+        breedSounds: breed,
+        resurrectSound: resurrectById
       });
       appendChat('system', `Applied: ${pendingAri[index].type}`); scheduleSave(); syncControls();
     } catch (err) { status(err.message, 'bad'); return; }
@@ -252,7 +276,7 @@ els.exportMix.addEventListener('click', async () => {
     downloadBlob(wav, `${safeName(project.name)}-master-48k.wav`);
     const before = Number.isFinite(mastered.before.integratedLufs) ? mastered.before.integratedLufs.toFixed(1) : '−∞';
     const after = Number.isFinite(mastered.after.integratedLufs) ? mastered.after.integratedLufs.toFixed(1) : '−∞';
-    status(`Master exported · ${before} → ${after} LUFS · ${mastered.after.truePeakDbtp.toFixed(1)} dBTP`);
+    status(`Master exported · ${before} → ${after} LUFS · ${Number.isFinite(mastered.after.truePeakDbtp) ? mastered.after.truePeakDbtp.toFixed(1) : '−∞'} dBTP`);
   } catch (e) { status(e.message, 'bad'); }
 });
 els.save.addEventListener('click', async () => { try { project = await saveProject(project); status('Project saved locally'); } catch (e) { status(e.message, 'bad'); } });
