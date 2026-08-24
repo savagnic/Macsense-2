@@ -9,7 +9,8 @@ const types = new Map([['.html', 'text/html'], ['.js', 'application/javascript']
 
 async function serveStatic() {
   const server = createServer(async (req, res) => {
-    const path = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+    const requested = req.url.split('?')[0];
+    const path = requested === '/' || requested === '' ? '/index.html' : requested;
     try {
       const file = await readFile(join(root, path));
       res.writeHead(200, { 'content-type': types.get(extname(path)) || 'text/plain' });
