@@ -14,9 +14,11 @@ test('static browser smoke exposes proof mode and genetic sound family modules',
   try {
     await wait(900);
     const html = await fetchText('');
-    assert.match(html, /MACSENSE AI/);
+    assert.match(html, /MacSense AI|MACSENSE\s*<span>AI<\/span>/);
+    assert.match(html, /Production Studio|PRODUCTION SYSTEM/);
     assert.match(html, /src\/proof-mode\.js/);
     assert.match(html, /src\/sound-family-ui\.js/);
+    assert.match(html, /src\/commercial-shell\.js/);
 
     const proof = await fetchText('src/proof-mode.js');
     assert.match(proof, /VINNY PROOF MODE/);

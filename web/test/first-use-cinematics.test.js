@@ -26,7 +26,7 @@ listeners.focusin({ target: new FakeElement('#lyrics') });
 listeners.click({ target: new FakeElement('button', { feature: 'vocal' }) });
 listeners.click({ target: new FakeElement('button', { feature: 'resurrection' }) });
 
-assert.deepEqual(played, ['flow-capture', 'lyrics-studio', 'vocal-scanner', 'resurrection']);
+assert.deepEqual(played, ['flow-capture', 'bar-revision', 'vocal-scanner', 'resurrection']);
 cleanup();
 assert.equal(listeners.click, undefined);
 
