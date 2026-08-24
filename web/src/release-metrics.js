@@ -30,7 +30,7 @@ export const MEANINGFUL_RELEASE_METRICS = Object.freeze([
   {
     id: 'featureMarkerCoverage',
     label: 'Feature story coverage',
-    why: 'Proves the visible product story names the key systems users are paying for.',
+    why: 'Proves the release surface names the key systems users are paying for, even when those markers live in imported modules.',
     target: '100%'
   },
   {
@@ -59,12 +59,15 @@ export const MEANINGFUL_RELEASE_METRICS = Object.freeze([
   }
 ]);
 
-export function measureReleaseShell(html = '', manifest = RELEASE_MANIFEST, thresholds = RELEASE_METRIC_THRESHOLDS) {
+export function measureReleaseShell(html = '', manifest = RELEASE_MANIFEST, thresholds = RELEASE_METRIC_THRESHOLDS, options = {}) {
+  const releaseSurfaceText = options.releaseSurfaceText || html;
+  const payloadText = options.payloadText || html;
   const shell = validateReleaseShell(html);
   const importedModules = extractModuleImports(html);
   const duplicateModuleImports = importedModules.filter((modulePath, index) => importedModules.indexOf(modulePath) !== index);
-  const missingFeatureMarkers = manifest.requiredFeatureMarkers.filter(marker => !html.includes(marker));
-  const htmlBytes = byteLength(html);
+  const missingFeatureMarkers = manifest.requiredFeatureMarkers.filter(marker => !releaseSurfaceText.includes(marker));
+  const htmlBytes = byteLength(payloadText);
+  const releaseSurfaceBytes = byteLength(releaseSurfaceText);
   const scriptTagCount = countMatches(html, /<script\b/gi);
   const moduleCoverage = ratio(manifest.requiredModules.length - shell.missingModules.length, manifest.requiredModules.length);
   const shellMarkerCoverage = ratio(manifest.requiredShellMarkers.length - shell.missingMarkers.length, manifest.requiredShellMarkers.length);
@@ -92,6 +95,7 @@ export function measureReleaseShell(html = '', manifest = RELEASE_MANIFEST, thre
     featureMarkerCoverage,
     livePathCoverage,
     htmlBytes,
+    releaseSurfaceBytes,
     scriptTagCount,
     importedModuleCount: importedModules.length,
     duplicateModuleImports,
