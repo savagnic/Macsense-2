@@ -1,0 +1,89 @@
+name: Vercel Production Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      live_url:
+        description: Production URL to verify after deploy
+        required: false
+        default: https://macsense-2-sable.vercel.app
+  push:
+    branches:
+      - main
+    paths:
+      - web/**
+      - vercel.json
+      - scripts/verify-live-release.mjs
+      - .github/workflows/vercel-production-deploy.yml
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_ORG_ID: team_R3kGWx1Hkh6WzkGlQ3tuc4h8
+  VERCEL_PROJECT_ID: prj_7tDd1wYNdz1qUYEThzvLAyPzlDpc
+  MACSENSE_LIVE_URL: ${{ github.event.inputs.live_url || 'https://macsense-2-sable.vercel.app' }}
+
+jobs:
+  verify-repo-shell:
+    name: Verify repo release shell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install web dependencies
+        run: npm --prefix web install
+      - name: Run web tests
+        run: npm --prefix web test
+      - name: Verify required release files exist
+        run: |
+          set -euo pipefail
+          test -f web/index.html
+          test -f web/src/release-manifest.js
+          test -f web/src/release-metrics.js
+          test -f web/src/customer-edge-scorecard.js
+          test -f scripts/verify-live-release.mjs
+
+  deploy-production:
+    name: Deploy exact checked-out repo to Vercel
+    needs: verify-repo-shell
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Require Vercel token
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN is required in GitHub Actions secrets."
+            exit 1
+          fi
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Pull Vercel project settings
+        run: vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Build exact production output
+        run: vercel build --prod --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy prebuilt production output
+        id: deploy
+        run: |
+          set -euo pipefail
+          url=$(vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN")
+          echo "deployment_url=$url" >> "$GITHUB_OUTPUT"
+          echo "VERCEL_DEPLOYMENT_URL=${url#https://}" >> "$GITHUB_ENV"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Verify deployed release parity
+        run: node scripts/verify-live-release.mjs "${{ steps.deploy.outputs.deployment_url }}"
+      - name: Verify production alias parity
+        run: node scripts/verify-live-release.mjs "$MACSENSE_LIVE_URL"
