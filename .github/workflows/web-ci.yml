@@ -32,6 +32,8 @@ jobs:
           grep -q 'SoundGenome' web/test/domain.test.js
           grep -q 'mountMacsenseExperience' web/src/app.js
           grep -q 'normalizeToTarget' web/src/app.js
+          grep -q 'MacSense AI' web/index.html
+          grep -q 'commercial-shell.js' web/index.html
           if grep -RInE 'GEMINI_API_KEY|service_role|SUPABASE_SERVICE_ROLE' web --exclude='*.md'; then
             echo 'Server-only secret reference found in web client'
             exit 1
@@ -42,7 +44,8 @@ jobs:
           python3 -m http.server 4173 >/tmp/macsense-web.log 2>&1 &
           echo $! >/tmp/macsense-web.pid
           sleep 1
-          curl --fail --silent http://127.0.0.1:4173/ | grep -q 'MACSENSE AI'
+          curl --fail --silent http://127.0.0.1:4173/ | grep -q 'MacSense AI'
+          curl --fail --silent http://127.0.0.1:4173/ | grep -q 'commercial-shell.js'
           curl --fail --silent http://127.0.0.1:4173/src/app.js | grep -q 'WebAudioEngine'
       - name: Stop static studio
         if: always()
@@ -74,7 +77,8 @@ jobs:
           done
           cat /tmp/ready.json
           grep -q '"status":"ready"' /tmp/ready.json
-          curl --fail --silent http://127.0.0.1:8080/ | grep -q 'MACSENSE AI'
+          curl --fail --silent http://127.0.0.1:8080/ | grep -q 'MacSense AI'
+          curl --fail --silent http://127.0.0.1:8080/ | grep -q 'commercial-shell.js'
           curl --fail --silent http://127.0.0.1:8080/src/app.js | grep -q 'mountMacsenseExperience'
       - name: Stop combined studio container
         if: always()
