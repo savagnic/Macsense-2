@@ -15,6 +15,18 @@ import {
 const root = new URL('..', import.meta.url).pathname;
 const types = new Map([['.html', 'text/html'], ['.js', 'application/javascript'], ['.css', 'text/css'], ['.webmanifest', 'application/manifest+json']]);
 
+async function readRepoReleaseSurface() {
+  const html = await readFile(join(root, 'index.html'), 'utf8');
+  const modules = await Promise.all(RELEASE_MANIFEST.requiredModules.map(modulePath => readFile(join(root, modulePath.replace('./', '')), 'utf8')));
+  return { html, releaseSurfaceText: [html, ...modules].join('\n') };
+}
+
+async function readServedReleaseSurface(base) {
+  const html = await fetch(`${base}/`).then(response => response.text());
+  const modules = await Promise.all(RELEASE_MANIFEST.requiredModules.map(modulePath => fetch(`${base}/${modulePath.replace(/^\.\//, '')}`).then(response => response.text())));
+  return { html, releaseSurfaceText: [html, ...modules].join('\n') };
+}
+
 async function serveStatic() {
   const server = createServer(async (req, res) => {
     const path = req.url === '/' ? '/index.html' : req.url.split('?')[0];
@@ -32,8 +44,8 @@ async function serveStatic() {
 }
 
 test('release metrics pass on the repo production shell with meaningful budgets', async () => {
-  const html = await readFile(join(root, 'index.html'), 'utf8');
-  const metrics = measureReleaseShell(html);
+  const { html, releaseSurfaceText } = await readRepoReleaseSurface();
+  const metrics = measureReleaseShell(html, RELEASE_MANIFEST, undefined, { releaseSurfaceText });
   assert.equal(metrics.ok, true);
   assert.equal(metrics.releaseScore, 100);
   assert.equal(metrics.moduleCoverage, 1);
@@ -42,24 +54,25 @@ test('release metrics pass on the repo production shell with meaningful budgets'
   assert.equal(metrics.livePathCoverage, 1);
   assert.equal(metrics.duplicateModuleImports.length, 0);
   assert.ok(metrics.htmlBytes > 1000);
+  assert.ok(metrics.releaseSurfaceBytes > metrics.htmlBytes);
   assert.ok(metrics.htmlBytes <= metrics.thresholds.maxHtmlBytes);
   assert.ok(metrics.scriptTagCount <= metrics.thresholds.maxScriptTags);
   assert.equal(assertReleaseMetrics(metrics), true);
 });
 
 test('release metrics fail if a required production module is missing', async () => {
-  const html = await readFile(join(root, 'index.html'), 'utf8');
+  const { html, releaseSurfaceText } = await readRepoReleaseSurface();
   const broken = html.replace('./src/finish-mode-ui.js', './src/missing-finish-mode-ui.js');
-  const metrics = measureReleaseShell(broken);
+  const metrics = measureReleaseShell(broken, RELEASE_MANIFEST, undefined, { releaseSurfaceText });
   assert.equal(metrics.ok, false);
   assert.ok(metrics.missingModules.includes('./src/finish-mode-ui.js'));
   assert.throws(() => assertReleaseMetrics(metrics), /Release metrics failed/);
 });
 
 test('release metrics fail on duplicate module imports', async () => {
-  const html = await readFile(join(root, 'index.html'), 'utf8');
+  const { html, releaseSurfaceText } = await readRepoReleaseSurface();
   const duplicated = html.replace('</body>', '  <script type="module" src="./src/finish-mode-ui.js"></script>\n</body>');
-  const metrics = measureReleaseShell(duplicated);
+  const metrics = measureReleaseShell(duplicated, RELEASE_MANIFEST, undefined, { releaseSurfaceText });
   assert.equal(metrics.ok, false);
   assert.deepEqual(metrics.duplicateModuleImports, ['./src/finish-mode-ui.js']);
 });
@@ -69,8 +82,8 @@ test('served release paths resolve and keep 100 percent coverage', async (t) => 
   t.after(() => server.close());
   const { port } = server.address();
   const base = `http://127.0.0.1:${port}`;
-  const html = await fetch(`${base}/`).then(response => response.text());
-  const metrics = measureReleaseShell(html);
+  const { html, releaseSurfaceText } = await readServedReleaseSurface(base);
+  const metrics = measureReleaseShell(html, RELEASE_MANIFEST, undefined, { releaseSurfaceText });
   assert.equal(metrics.ok, true);
   const imports = extractModuleImports(html);
   for (const modulePath of RELEASE_MANIFEST.requiredModules) {
@@ -84,8 +97,8 @@ test('served release paths resolve and keep 100 percent coverage', async (t) => 
 });
 
 test('metric report explains the release decision and boundary', async () => {
-  const html = await readFile(join(root, 'index.html'), 'utf8');
-  const metrics = measureReleaseShell(html);
+  const { html, releaseSurfaceText } = await readRepoReleaseSurface();
+  const metrics = measureReleaseShell(html, RELEASE_MANIFEST, undefined, { releaseSurfaceText });
   const report = buildReleaseMetricReport(metrics, { commitSha: 'test-sha', source: 'node-test' });
   assert.equal(report.status, 'pass');
   assert.equal(report.releaseScore, 100);
