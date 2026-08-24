@@ -1,19 +1,25 @@
 const selectorMap = [
+  ['#commercial-deck,#commercial-start-cinema,#commercial-run-proof', 'proof-mode'],
   ['#play,.tracks,.add-track,#add-audio', 'vertical-daw'],
   ['#record', 'flow-capture'],
-  ['#lyrics', 'lyrics-studio'],
+  ['#song-revision-studio,#revision-bars,#revision-rewrite,#revision-export', 'bar-revision'],
+  ['#lyrics', 'bar-revision'],
   ['#ari-input,#ari-send,.ari-panel', 'ari'],
-  ['#genome-list,.genetics-panel', 'sound-genetics'],
-  ['#breed,.breed-controls', 'breeding'],
+  ['#genome-list,.genetics-panel,#sound-family-studio', 'sound-genetics'],
+  ['#breed,.breed-controls,#family-breed', 'breeding'],
+  ['#family-resurrect,#resurrect-sound', 'resurrection'],
+  ['#legal-engine-pack,#engine-pack-split,#engine-pack-export', 'engine-pack'],
   ['#export-mix', 'export'],
   ['#target-lufs,#ceiling,#warmth,#width,#punch,.master-card', 'mastering']
 ];
 
 const dockFeatureMap = {
-  arrangement: 'arrangement',
+  proof: 'proof-mode',
   vocal: 'vocal-scanner',
   resurrection: 'resurrection',
-  story: 'ari'
+  story: 'ari',
+  revision: 'bar-revision',
+  engine: 'engine-pack'
 };
 
 function trigger(featureId) {
