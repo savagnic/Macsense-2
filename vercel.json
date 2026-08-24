@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "public": true,
+  "cleanUrls": false,
+  "trailingSlash": false,
+  "buildCommand": "npm --prefix web test",
+  "outputDirectory": "web",
+  "installCommand": "npm --prefix web install",
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/$1" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "X-MacSense-Release-Gate", "value": "repo-backed-vercel" }
+      ]
+    }
+  ]
+}
