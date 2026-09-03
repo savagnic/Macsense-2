@@ -1,0 +1,16 @@
+name: Actions diagnostic 2026-09-02
+
+on:
+  push:
+    branches: [actions-diagnostic-20260902]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Prove runner dispatch
+        run: echo "actions-dispatch-ok"
