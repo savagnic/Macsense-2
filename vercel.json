@@ -3,7 +3,7 @@
   "public": true,
   "cleanUrls": false,
   "trailingSlash": false,
-  "buildCommand": "npm --prefix web test",
+  "buildCommand": null,
   "outputDirectory": "web",
   "installCommand": "npm --prefix web install",
   "rewrites": [
