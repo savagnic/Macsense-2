@@ -3,9 +3,7 @@
   "public": true,
   "cleanUrls": false,
   "trailingSlash": false,
-  "buildCommand": null,
   "outputDirectory": "web",
-  "installCommand": "npm --prefix web install",
   "rewrites": [
     { "source": "/", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/$1" }
