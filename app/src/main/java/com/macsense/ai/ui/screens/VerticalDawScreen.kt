@@ -1074,9 +1074,11 @@ fun StemFaderRow(
     onMuteToggle: (Boolean) -> Unit,
     onSoloToggle: (Boolean) -> Unit
 ) {
-    val peakValue = remember(volume, isMuted) {
-        if (isMuted) 0f else volume * (0.6f + (Math.random().toFloat() * 0.4f))
-    }
+    // Effective output gain for this stem: fader position with mute applied.
+    // Deliberately NOT an audio peak measurement — per-stem playback metering is
+    // not wired to any audio engine at this layer, so the previous randomized
+    // "peak" readout has been removed instead of fabricating one.
+    val effectiveGain = if (isMuted) 0f else volume
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1127,7 +1129,7 @@ fun StemFaderRow(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Small bouncing visual meter bar
+                // Effective output-gain indicator (gain state only — not a live audio meter)
                 Box(
                     modifier = Modifier
                         .width(48.dp)
@@ -1138,7 +1140,7 @@ fun StemFaderRow(
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .fillMaxWidth(peakValue.coerceIn(0f, 1f))
+                            .fillMaxWidth(effectiveGain.coerceIn(0f, 1f))
                             .background(glowColor)
                     )
                 }
