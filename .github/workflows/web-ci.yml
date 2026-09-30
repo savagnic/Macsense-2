@@ -64,6 +64,9 @@ jobs:
         run: |
           npm install
           npm run build
+      - name: Test gateway
+        working-directory: server
+        run: npm test
       - name: Build combined production image
         run: docker build -t macsense-studio:ci .
       - name: Boot combined studio container
