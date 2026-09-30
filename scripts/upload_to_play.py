@@ -27,7 +27,10 @@ def main():
     print("")
     print("TODO: implement google-api-python-client upload here.")
     print("Reference: https://developers.google.com/android-publisher/api-ref/rest/v3/edits.apks/upload")
-    sys.exit(0)  # Remove exit(0) once real upload is implemented
+    # Exit non-zero: nothing was uploaded, and a 0 would masquerade as a
+    # successful upload if this stub were ever wired into automation.
+    print("[upload_to_play] ERROR: upload not implemented; no upload performed.", file=sys.stderr)
+    sys.exit(1)
 
     # Example real implementation skeleton:
     # from google.oauth2 import service_account
